@@ -6,6 +6,7 @@
  */
 package org.gridsuite.notification.server;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -22,6 +23,9 @@ import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +54,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String HEADER_TIMESTAMP = "timestamp";
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -110,8 +115,15 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         URI uri = webSocketSession.getHandshakeInfo().getUri();
-        MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build().getQueryParams();
+        MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
         String filterStudyName = parameters.getFirst(QUERY_STUDY_NAME);
+        if (filterStudyName != null) {
+            try {
+                filterStudyName = java.net.URLDecoder.decode(filterStudyName, StandardCharsets.UTF_8.name());
+            } catch (UnsupportedEncodingException e) {
+                LOGGER.error(e.toString(), e);
+            }
+        }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         return webSocketSession
                 .send(
