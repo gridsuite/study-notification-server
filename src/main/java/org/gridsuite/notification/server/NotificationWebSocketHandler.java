@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
@@ -43,8 +45,9 @@ import reactor.core.publisher.Mono;
 @Component
 public class NotificationWebSocketHandler implements WebSocketHandler {
 
-    private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".input-broker-messages";
-    private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".output-websocket-messages";
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
+    private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
+    private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
     private static final String QUERY_STUDY_NAME = "studyName";
     private static final String QUERY_UPDATE_TYPE = "updateType";
     private static final String HEADER_STUDY_NAME = "studyName";
@@ -96,7 +99,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
-        }).map(webSocketSession::textMessage);
+        }).log(CATEGORY_WS_OUTPUT, Level.FINE).map(webSocketSession::textMessage);
     }
 
     /**
@@ -113,11 +116,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build().getQueryParams();
         String filterStudyName = parameters.getFirst(QUERY_STUDY_NAME);
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
+        LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyName, filterUpdateType);
         return webSocketSession
                 .send(
                         notificationFlux(webSocketSession, filterStudyName, filterUpdateType)
-                        .mergeWith(heartbeatFlux(webSocketSession))
-                        .log(CATEGORY_WS_OUTPUT, Level.FINE))
+                        .mergeWith(heartbeatFlux(webSocketSession)))
                 .and(webSocketSession.receive());
     }
 }
