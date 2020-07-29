@@ -118,7 +118,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             try {
                 filterStudyName = URLDecoder.decode(filterStudyName, StandardCharsets.UTF_8.toString());
             } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e.getCause());
+                throw new NotificationServerRuntimeException(e.getMessage());
             }
         }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
