@@ -58,7 +58,7 @@ public class NotificationWebSocketHandlerTest {
 
         ws = Mockito.mock(WebSocketSession.class);
         handshakeinfo = Mockito.mock(HandshakeInfo.class);
-        uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
+        uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify?studyName=foo/bar?foo");
 
         when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
         when(ws.getHandshakeInfo()).thenReturn(handshakeinfo);
