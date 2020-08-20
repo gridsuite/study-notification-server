@@ -49,7 +49,6 @@ public class NotificationWebSocketHandlerTest {
     private WebSocketSession ws;
     private HandshakeInfo handshakeinfo;
     private Flux<Message<String>> flux;
-    private UriComponentsBuilder uriComponentBuilder;
 
     @Before
     public void setup() {
@@ -58,9 +57,7 @@ public class NotificationWebSocketHandlerTest {
 
         ws = Mockito.mock(WebSocketSession.class);
         handshakeinfo = Mockito.mock(HandshakeInfo.class);
-        uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
 
-        when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
         when(ws.getHandshakeInfo()).thenReturn(handshakeinfo);
         when(ws.receive()).thenReturn(Flux.empty());
         when(ws.send(any())).thenReturn(Mono.empty());
@@ -81,12 +78,16 @@ public class NotificationWebSocketHandlerTest {
     private void withFilters(String filterStudyName, String filterUpdateType) {
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
 
+        UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
+
         if (filterStudyName != null) {
             uriComponentBuilder.queryParam("studyName", filterStudyName);
         }
         if (filterUpdateType != null) {
             uriComponentBuilder.queryParam("updateType", filterUpdateType);
         }
+
+        when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
 
         var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
         var flux = Flux.create(atomicRef::set);
@@ -158,6 +159,7 @@ public class NotificationWebSocketHandlerTest {
     public void testHeartbeat() {
         var notificationWebSocketHandler = new NotificationWebSocketHandler(null, 1);
 
+        UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
         when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
         var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
