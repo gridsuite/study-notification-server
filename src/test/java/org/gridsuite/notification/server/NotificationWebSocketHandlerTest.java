@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -111,28 +112,28 @@ public class NotificationWebSocketHandlerTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
         verify(ws).send(argument.capture());
-        argument.getValue().map(WebSocketMessage::getPayloadAsText).collectList().subscribe(list -> {
-            List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
-                String name = (String) headers.get("studyName");
-                String type = (String) headers.get("updateType");
-                return (filterStudyName == null || filterStudyName.equals(name))
-                        && (filterUpdateType == null || filterUpdateType.equals(type));
-            }).collect(Collectors.toList());
-            List<Map<String, Object>> actual = list.stream().map(t -> {
-                try {
-                    var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
-                            .get("headers");
-                    return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
-                            deserializedHeaders.get("updateType"));
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            }).collect(Collectors.toList());
-            assertEquals(expected, actual);
-        });
-
+        List<String> messages = new ArrayList<String>();
+        argument.getValue().map(WebSocketMessage::getPayloadAsText).log().subscribe(messages::add);
         refMessages.stream().map(headers -> new GenericMessage<String>("", headers)).forEach(sink::next);
         sink.complete();
+
+        List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
+            String name = (String) headers.get("studyName");
+            String type = (String) headers.get("updateType");
+            return (filterStudyName == null || filterStudyName.equals(name))
+                    && (filterUpdateType == null || filterUpdateType.equals(type));
+        }).collect(Collectors.toList());
+        List<Map<String, Object>> actual = messages.stream().map(t -> {
+            try {
+                var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
+                        .get("headers");
+                return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
+                        deserializedHeaders.get("updateType"));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+        assertEquals(expected, actual);
     }
 
     @Test
