@@ -58,7 +58,6 @@ public class NotificationWebSocketHandlerTest {
 
         ws = Mockito.mock(WebSocketSession.class);
         handshakeinfo = Mockito.mock(HandshakeInfo.class);
-        uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify?studyName=foo/bar?foo");
 
         when(ws.getHandshakeInfo()).thenReturn(handshakeinfo);
         when(ws.receive()).thenReturn(Flux.empty());
@@ -155,6 +154,11 @@ public class NotificationWebSocketHandlerTest {
     @Test
     public void testStudyAndTypeFilter() {
         withFilters("bar", "rab");
+    }
+
+    @Test
+    public void testEncodingCharacters() {
+        withFilters("foo bar/bar", null);
     }
 
     @Test
