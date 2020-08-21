@@ -1,4 +1,0 @@
-org/gridsuite/notification/server/NotificationApplication.class
-org/gridsuite/notification/server/NotificationServerRuntimeException.class
-org/gridsuite/notification/server/NotificationWebSocketConfiguration.class
-org/gridsuite/notification/server/NotificationWebSocketHandler.class
