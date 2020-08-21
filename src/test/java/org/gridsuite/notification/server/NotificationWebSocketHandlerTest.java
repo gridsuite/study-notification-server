@@ -106,14 +106,15 @@ public class NotificationWebSocketHandlerTest {
                 Map.of("studyName", "baz", "updateType", "rab"),
                 Map.of("studyName", "foo", "updateType", "oof"),
                 Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof")
+                Map.of("studyName", "baz", "updateType", "oof"),
+                Map.of("studyName", "foo bar/bar", "updateType", "foobar")
         );
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
         verify(ws).send(argument.capture());
         List<String> messages = new ArrayList<String>();
-        argument.getValue().map(WebSocketMessage::getPayloadAsText).log().subscribe(messages::add);
+        argument.getValue().map(WebSocketMessage::getPayloadAsText).subscribe(messages::add);
         refMessages.stream().map(headers -> new GenericMessage<String>("", headers)).forEach(sink::next);
         sink.complete();
 
@@ -154,6 +155,11 @@ public class NotificationWebSocketHandlerTest {
     @Test
     public void testStudyAndTypeFilter() {
         withFilters("bar", "rab");
+    }
+
+    @Test
+    public void testEncodingCharacters() {
+        withFilters("foo bar/bar", "foobar");
     }
 
     @Test

@@ -6,7 +6,9 @@
  */
 package org.gridsuite.notification.server;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
@@ -113,8 +115,15 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         URI uri = webSocketSession.getHandshakeInfo().getUri();
-        MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build().getQueryParams();
+        MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
         String filterStudyName = parameters.getFirst(QUERY_STUDY_NAME);
+        if (filterStudyName != null) {
+            try {
+                filterStudyName = URLDecoder.decode(filterStudyName, StandardCharsets.UTF_8.toString());
+            } catch (UnsupportedEncodingException e) {
+                throw new NotificationServerRuntimeException(e.getMessage());
+            }
+        }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyName, filterUpdateType);
         return webSocketSession
