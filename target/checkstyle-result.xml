@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.19">
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/main/java/org/gridsuite/notification/server/NotificationWebSocketHandler.java">
+</file>
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/main/java/org/gridsuite/notification/server/NotificationApplication.java">
+</file>
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/main/java/org/gridsuite/notification/server/NotificationWebSocketConfiguration.java">
+</file>
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/main/java/org/gridsuite/notification/server/NotificationServerRuntimeException.java">
+</file>
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/test/java/org/gridsuite/notification/server/NotificationWebSocketHandlerTest.java">
+</file>
+<file name="/home/homereti/Devs/GridSuit/notification-server/src/test/java/org/gridsuite/notification/server/NotificationWebSocketIT.java">
+</file>
+</checkstyle>

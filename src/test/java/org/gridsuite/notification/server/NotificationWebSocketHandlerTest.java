@@ -106,7 +106,8 @@ public class NotificationWebSocketHandlerTest {
                 Map.of("studyName", "baz", "updateType", "rab"),
                 Map.of("studyName", "foo", "updateType", "oof"),
                 Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof")
+                Map.of("studyName", "baz", "updateType", "oof"),
+                Map.of("studyName", "foo%20bar%2Fbar", "updateType", "foobar")
         );
 
         @SuppressWarnings("unchecked")
@@ -158,7 +159,7 @@ public class NotificationWebSocketHandlerTest {
 
     @Test
     public void testEncodingCharacters() {
-        withFilters("foo bar/bar", null);
+        withFilters("foo%20bar%2Fbar", "foobar");
     }
 
     @Test
