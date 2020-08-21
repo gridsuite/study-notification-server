@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,6 @@ public class NotificationWebSocketHandlerTest {
     private WebSocketSession ws;
     private HandshakeInfo handshakeinfo;
     private Flux<Message<String>> flux;
-    private UriComponentsBuilder uriComponentBuilder;
 
     @Before
     public void setup() {
@@ -60,7 +60,6 @@ public class NotificationWebSocketHandlerTest {
         handshakeinfo = Mockito.mock(HandshakeInfo.class);
         uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify?studyName=foo/bar?foo");
 
-        when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
         when(ws.getHandshakeInfo()).thenReturn(handshakeinfo);
         when(ws.receive()).thenReturn(Flux.empty());
         when(ws.send(any())).thenReturn(Mono.empty());
@@ -81,12 +80,16 @@ public class NotificationWebSocketHandlerTest {
     private void withFilters(String filterStudyName, String filterUpdateType) {
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
 
+        UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
+
         if (filterStudyName != null) {
             uriComponentBuilder.queryParam("studyName", filterStudyName);
         }
         if (filterUpdateType != null) {
             uriComponentBuilder.queryParam("updateType", filterUpdateType);
         }
+
+        when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
 
         var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
         var flux = Flux.create(atomicRef::set);
@@ -110,28 +113,28 @@ public class NotificationWebSocketHandlerTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
         verify(ws).send(argument.capture());
-        argument.getValue().map(WebSocketMessage::getPayloadAsText).collectList().subscribe(list -> {
-            List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
-                String name = (String) headers.get("studyName");
-                String type = (String) headers.get("updateType");
-                return (filterStudyName == null || filterStudyName.equals(name))
-                        && (filterUpdateType == null || filterUpdateType.equals(type));
-            }).collect(Collectors.toList());
-            List<Map<String, Object>> actual = list.stream().map(t -> {
-                try {
-                    var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
-                            .get("headers");
-                    return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
-                            deserializedHeaders.get("updateType"));
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            }).collect(Collectors.toList());
-            assertEquals(expected, actual);
-        });
-
+        List<String> messages = new ArrayList<String>();
+        argument.getValue().map(WebSocketMessage::getPayloadAsText).log().subscribe(messages::add);
         refMessages.stream().map(headers -> new GenericMessage<String>("", headers)).forEach(sink::next);
         sink.complete();
+
+        List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
+            String name = (String) headers.get("studyName");
+            String type = (String) headers.get("updateType");
+            return (filterStudyName == null || filterStudyName.equals(name))
+                    && (filterUpdateType == null || filterUpdateType.equals(type));
+        }).collect(Collectors.toList());
+        List<Map<String, Object>> actual = messages.stream().map(t -> {
+            try {
+                var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
+                        .get("headers");
+                return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
+                        deserializedHeaders.get("updateType"));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -158,6 +161,7 @@ public class NotificationWebSocketHandlerTest {
     public void testHeartbeat() {
         var notificationWebSocketHandler = new NotificationWebSocketHandler(null, 1);
 
+        UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
         when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
         var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
