@@ -50,12 +50,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
     private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
     private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
-    private static final String QUERY_STUDY_NAME = "studyName";
-    private static final String QUERY_UPDATE_TYPE = "updateType";
-    private static final String HEADER_STUDY_NAME = "studyName";
-    private static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String QUERY_UPDATE_TYPE = "type";
+    public static final String QUERY_STUDY_NAME = "studyName";
+    public static final String HEADER_STUDY_NAME = "studyName";
+    public static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String HEADER_TIMESTAMP = "timestamp";
-
     private ObjectMapper jacksonObjectMapper;
 
     private int heartbeatInterval;
@@ -127,8 +126,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyName, filterUpdateType);
         return webSocketSession
-                .send(
-                        notificationFlux(webSocketSession, filterStudyName, filterUpdateType)
+                .send(notificationFlux(webSocketSession, filterStudyName, filterUpdateType)
                         .mergeWith(heartbeatFlux(webSocketSession)))
                 .and(webSocketSession.receive());
     }

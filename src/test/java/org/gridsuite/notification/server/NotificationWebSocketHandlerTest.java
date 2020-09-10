@@ -41,6 +41,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
+import static org.gridsuite.notification.server.NotificationWebSocketHandler.*;
+
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
  */
@@ -82,10 +84,10 @@ public class NotificationWebSocketHandlerTest {
         UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
 
         if (filterStudyName != null) {
-            uriComponentBuilder.queryParam("studyName", filterStudyName);
+            uriComponentBuilder.queryParam(QUERY_STUDY_NAME, filterStudyName);
         }
         if (filterUpdateType != null) {
-            uriComponentBuilder.queryParam("updateType", filterUpdateType);
+            uriComponentBuilder.queryParam(QUERY_UPDATE_TYPE, filterUpdateType);
         }
 
         when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
@@ -98,16 +100,16 @@ public class NotificationWebSocketHandlerTest {
         notificationWebSocketHandler.handle(ws);
 
         List<Map<String, Object>> refMessages = Arrays.asList(
-                Map.of("studyName", "foo", "updateType", "oof"),
-                Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof"),
-                Map.of("studyName", "foo", "updateType", "rab"),
-                Map.of("studyName", "bar", "updateType", "rab"),
-                Map.of("studyName", "baz", "updateType", "rab"),
-                Map.of("studyName", "foo", "updateType", "oof"),
-                Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof"),
-                Map.of("studyName", "foo bar/bar", "updateType", "foobar")
+                Map.of(HEADER_STUDY_NAME, "foo", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "bar", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "baz", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "foo", HEADER_UPDATE_TYPE, "rab"),
+                Map.of(HEADER_STUDY_NAME, "bar", HEADER_UPDATE_TYPE, "rab"),
+                Map.of(HEADER_STUDY_NAME, "baz", HEADER_UPDATE_TYPE, "rab"),
+                Map.of(HEADER_STUDY_NAME, "foo", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "bar", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "baz", HEADER_UPDATE_TYPE, "oof"),
+                Map.of(HEADER_STUDY_NAME, "foo bar/bar", HEADER_UPDATE_TYPE, "foobar")
         );
 
         @SuppressWarnings("unchecked")
@@ -119,8 +121,8 @@ public class NotificationWebSocketHandlerTest {
         sink.complete();
 
         List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
-            String name = (String) headers.get("studyName");
-            String type = (String) headers.get("updateType");
+            String name = (String) headers.get(HEADER_STUDY_NAME);
+            String type = (String) headers.get(HEADER_UPDATE_TYPE);
             return (filterStudyName == null || filterStudyName.equals(name))
                     && (filterUpdateType == null || filterUpdateType.equals(type));
         }).collect(Collectors.toList());
@@ -128,8 +130,8 @@ public class NotificationWebSocketHandlerTest {
             try {
                 var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
                         .get("headers");
-                return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
-                        deserializedHeaders.get("updateType"));
+                return Map.of(HEADER_STUDY_NAME, deserializedHeaders.get(HEADER_STUDY_NAME), HEADER_UPDATE_TYPE,
+                        deserializedHeaders.get(HEADER_UPDATE_TYPE));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
