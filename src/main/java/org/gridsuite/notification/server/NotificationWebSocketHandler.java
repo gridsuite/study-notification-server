@@ -73,6 +73,10 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             ConnectableFlux<Message<String>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
+            // Force connect 1 fake subscriber to consumme messages as they come.
+            // Otherwise, reactorcore buffers some messages (not until the connectable flux had
+            // at least one subscriber. Is there a better way ?
+            c.subscribe();
         };
     }
 

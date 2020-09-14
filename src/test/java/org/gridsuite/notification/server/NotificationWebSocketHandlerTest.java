@@ -8,6 +8,7 @@ package org.gridsuite.notification.server;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
@@ -178,4 +180,44 @@ public class NotificationWebSocketHandlerTest {
         assertEquals("testsession-0", argument.getValue().blockFirst(Duration.ofSeconds(10)).getPayloadAsText());
     }
 
+    @Test
+    public void testDiscard() {
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
+
+        UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
+
+        when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
+
+        var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
+        var flux = Flux.create(atomicRef::set);
+        notificationWebSocketHandler.consumeNotification().accept(flux);
+        var sink = atomicRef.get();
+        Map<String, Object> headers = Map.of("studyName", "foo", "updateType", "oof");
+
+        sink.next(new GenericMessage<String>("", headers)); // should be discarded, no client connected
+
+        notificationWebSocketHandler.handle(ws);
+
+        ArgumentCaptor<Flux<WebSocketMessage>> argument1 = ArgumentCaptor.forClass(Flux.class);
+        verify(ws).send(argument1.capture());
+        List<String> messages1 = new ArrayList<String>();
+        Flux<WebSocketMessage> out1 = argument1.getValue();
+        Disposable d1 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
+        d1.dispose();
+
+        sink.next(new GenericMessage<String>("", headers)); // should be discarded, first client disconnected
+
+        notificationWebSocketHandler.handle(ws);
+
+        ArgumentCaptor<Flux<WebSocketMessage>> argument2 = ArgumentCaptor.forClass(Flux.class);
+        verify(ws, times(2)).send(argument2.capture());
+        List<String> messages2 = new ArrayList<String>();
+        Flux<WebSocketMessage> out2 = argument2.getValue();
+        Disposable d2 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
+        d2.dispose();
+
+        sink.complete();
+        assertEquals(0, messages1.size());
+        assertEquals(0, messages2.size());
+    }
 }
