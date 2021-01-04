@@ -100,12 +100,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                 Map<String, Object> headers = new HashMap<>();
                 headers.put(HEADER_TIMESTAMP, m.getHeaders().get(HEADER_TIMESTAMP));
                 headers.put(HEADER_STUDY_NAME, m.getHeaders().get(HEADER_STUDY_NAME));
-                if (m.getHeaders().get(HEADER_UPDATE_TYPE) != null) {
-                    headers.put(HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE));
-                }
-                if (m.getHeaders().get(HEADER_ERROR) != null) {
-                    headers.put(HEADER_ERROR, m.getHeaders().get(HEADER_ERROR));
-                }
+                headers.put(HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE));
+                headers.put(HEADER_ERROR, m.getHeaders().get(HEADER_ERROR));
                 Map<String, Object> submap = Map.of(
                         "payload", m.getPayload(),
                         "headers", headers);
