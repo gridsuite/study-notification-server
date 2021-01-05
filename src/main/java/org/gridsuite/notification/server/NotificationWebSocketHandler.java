@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -55,6 +56,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String HEADER_TIMESTAMP = "timestamp";
+    private static final String HEADER_ERROR = "error";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -95,12 +97,14 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             return res;
         }).map(m -> {
             try {
+                Map<String, Object> headers = new HashMap<>();
+                headers.put(HEADER_TIMESTAMP, m.getHeaders().get(HEADER_TIMESTAMP));
+                headers.put(HEADER_STUDY_NAME, m.getHeaders().get(HEADER_STUDY_NAME));
+                headers.put(HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE));
+                headers.put(HEADER_ERROR, m.getHeaders().get(HEADER_ERROR));
                 Map<String, Object> submap = Map.of(
                         "payload", m.getPayload(),
-                        "headers", Map.of(
-                                HEADER_TIMESTAMP, m.getHeaders().get(HEADER_TIMESTAMP),
-                                HEADER_STUDY_NAME, m.getHeaders().get(HEADER_STUDY_NAME),
-                                HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE)));
+                        "headers", headers);
                 return jacksonObjectMapper.writeValueAsString(submap);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
@@ -131,8 +135,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyName, filterUpdateType);
         return webSocketSession
-                .send(
-                        notificationFlux(webSocketSession, filterStudyName, filterUpdateType)
+                .send(notificationFlux(webSocketSession, filterStudyName, filterUpdateType)
                         .mergeWith(heartbeatFlux(webSocketSession)))
                 .and(webSocketSession.receive());
     }

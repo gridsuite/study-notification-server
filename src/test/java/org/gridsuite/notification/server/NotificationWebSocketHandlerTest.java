@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -109,8 +110,8 @@ public class NotificationWebSocketHandlerTest {
                 Map.of("studyName", "foo", "updateType", "oof"),
                 Map.of("studyName", "bar", "updateType", "oof"),
                 Map.of("studyName", "baz", "updateType", "oof"),
-                Map.of("studyName", "foo bar/bar", "updateType", "foobar")
-        );
+                Map.of("studyName", "foo bar/bar", "updateType", "foobar"),
+                Map.of("studyName", "bar", "updateType", "studies", "error", "error_message"));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
@@ -123,15 +124,23 @@ public class NotificationWebSocketHandlerTest {
         List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
             String name = (String) headers.get("studyName");
             String type = (String) headers.get("updateType");
+
             return (filterStudyName == null || filterStudyName.equals(name))
                     && (filterUpdateType == null || filterUpdateType.equals(type));
         }).collect(Collectors.toList());
         List<Map<String, Object>> actual = messages.stream().map(t -> {
             try {
-                var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class))
-                        .get("headers");
-                return Map.of("studyName", deserializedHeaders.get("studyName"), "updateType",
-                        deserializedHeaders.get("updateType"));
+                var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class)).get("headers");
+                var mapRes = new HashMap<String, Object>();
+
+                mapRes.put("studyName", deserializedHeaders.get("studyName"));
+                if (deserializedHeaders.get("updateType") != null) {
+                    mapRes.put("updateType", deserializedHeaders.get("updateType"));
+                }
+                if (deserializedHeaders.get("error") != null) {
+                    mapRes.put("error", deserializedHeaders.get("error"));
+                }
+                return mapRes;
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
