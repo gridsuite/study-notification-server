@@ -57,6 +57,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String HEADER_TIMESTAMP = "timestamp";
     private static final String HEADER_ERROR = "error";
+    private static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -85,7 +86,9 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     /**
      * map from the broker flux to the filtered flux for one websocket client, extracting only relevant fields.
      */
-    private Flux<WebSocketMessage> notificationFlux(WebSocketSession webSocketSession, String filterStudyName, String filterUpdateType) {
+    private Flux<WebSocketMessage> notificationFlux(WebSocketSession webSocketSession,
+                                                    String filterStudyName,
+                                                    String filterUpdateType) {
         return flux.transform(f -> {
             Flux<Message<String>> res = f;
             if (filterStudyName != null) {
@@ -102,6 +105,9 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                 headers.put(HEADER_STUDY_NAME, m.getHeaders().get(HEADER_STUDY_NAME));
                 headers.put(HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE));
                 headers.put(HEADER_ERROR, m.getHeaders().get(HEADER_ERROR));
+                if (m.getHeaders().get(HEADER_SUBSTATIONS_IDS) != null) {
+                    headers.put(HEADER_SUBSTATIONS_IDS, m.getHeaders().get(HEADER_SUBSTATIONS_IDS));
+                }
                 Map<String, Object> submap = Map.of(
                         "payload", m.getPayload(),
                         "headers", headers);

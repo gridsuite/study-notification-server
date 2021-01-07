@@ -111,20 +111,21 @@ public class NotificationWebSocketHandlerTest {
                 Map.of("studyName", "bar", "updateType", "oof"),
                 Map.of("studyName", "baz", "updateType", "oof"),
                 Map.of("studyName", "foo bar/bar", "updateType", "foobar"),
-                Map.of("studyName", "bar", "updateType", "studies", "error", "error_message"));
+                Map.of("studyName", "bar", "updateType", "studies", "error", "error_message"),
+                Map.of("studyName", "bar", "updateType", "rab", "substationsIds", "s1"));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
         verify(ws).send(argument.capture());
         List<String> messages = new ArrayList<String>();
         argument.getValue().map(WebSocketMessage::getPayloadAsText).subscribe(messages::add);
-        refMessages.stream().map(headers -> new GenericMessage<String>("", headers)).forEach(sink::next);
+        refMessages.stream().map(headers -> new GenericMessage<>("", headers)).forEach(sink::next);
         sink.complete();
 
         List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
             String name = (String) headers.get("studyName");
             String type = (String) headers.get("updateType");
-
+            String substationsIds = (String) headers.get("substationsIds");
             return (filterStudyName == null || filterStudyName.equals(name))
                     && (filterUpdateType == null || filterUpdateType.equals(type));
         }).collect(Collectors.toList());
@@ -139,6 +140,9 @@ public class NotificationWebSocketHandlerTest {
                 }
                 if (deserializedHeaders.get("error") != null) {
                     mapRes.put("error", deserializedHeaders.get("error"));
+                }
+                if (deserializedHeaders.get("substationsIds") != null) {
+                    mapRes.put("substationsIds", deserializedHeaders.get("substationsIds"));
                 }
                 return mapRes;
             } catch (JsonProcessingException e) {
@@ -203,7 +207,7 @@ public class NotificationWebSocketHandlerTest {
         var sink = atomicRef.get();
         Map<String, Object> headers = Map.of("studyName", "foo", "updateType", "oof");
 
-        sink.next(new GenericMessage<String>("", headers)); // should be discarded, no client connected
+        sink.next(new GenericMessage<>("", headers)); // should be discarded, no client connected
 
         notificationWebSocketHandler.handle(ws);
 
@@ -214,7 +218,7 @@ public class NotificationWebSocketHandlerTest {
         Disposable d1 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
         d1.dispose();
 
-        sink.next(new GenericMessage<String>("", headers)); // should be discarded, first client disconnected
+        sink.next(new GenericMessage<>("", headers)); // should be discarded, first client disconnected
 
         notificationWebSocketHandler.handle(ws);
 
