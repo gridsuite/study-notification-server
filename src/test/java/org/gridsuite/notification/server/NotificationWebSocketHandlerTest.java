@@ -79,13 +79,13 @@ public class NotificationWebSocketHandlerTest {
 
     }
 
-    private void withFilters(String filterStudyName, String filterUpdateType) {
+    private void withFilters(String filterStudyUuid, String filterUpdateType) {
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
 
         UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
 
-        if (filterStudyName != null) {
-            uriComponentBuilder.queryParam("studyName", filterStudyName);
+        if (filterStudyUuid != null) {
+            uriComponentBuilder.queryParam("studyUuid", filterStudyUuid);
         }
         if (filterUpdateType != null) {
             uriComponentBuilder.queryParam("updateType", filterUpdateType);
@@ -101,18 +101,18 @@ public class NotificationWebSocketHandlerTest {
         notificationWebSocketHandler.handle(ws);
 
         List<Map<String, Object>> refMessages = Arrays.asList(
-                Map.of("studyName", "foo", "updateType", "oof"),
-                Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof"),
-                Map.of("studyName", "foo", "updateType", "rab"),
-                Map.of("studyName", "bar", "updateType", "rab"),
-                Map.of("studyName", "baz", "updateType", "rab"),
-                Map.of("studyName", "foo", "updateType", "oof"),
-                Map.of("studyName", "bar", "updateType", "oof"),
-                Map.of("studyName", "baz", "updateType", "oof"),
-                Map.of("studyName", "foo bar/bar", "updateType", "foobar"),
-                Map.of("studyName", "bar", "updateType", "studies", "error", "error_message"),
-                Map.of("studyName", "bar", "updateType", "rab", "substationsIds", "s1"));
+                Map.of("studyUuid", "foo", "updateType", "oof"),
+                Map.of("studyUuid", "bar", "updateType", "oof"),
+                Map.of("studyUuid", "baz", "updateType", "oof"),
+                Map.of("studyUuid", "foo", "updateType", "rab"),
+                Map.of("studyUuid", "bar", "updateType", "rab"),
+                Map.of("studyUuid", "baz", "updateType", "rab"),
+                Map.of("studyUuid", "foo", "updateType", "oof"),
+                Map.of("studyUuid", "bar", "updateType", "oof"),
+                Map.of("studyUuid", "baz", "updateType", "oof"),
+                Map.of("studyUuid", "foo bar/bar", "updateType", "foobar"),
+                Map.of("studyUuid", "bar", "updateType", "studies", "error", "error_message"),
+                Map.of("studyUuid", "bar", "updateType", "rab", "substationsIds", "s1"));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
@@ -123,10 +123,10 @@ public class NotificationWebSocketHandlerTest {
         sink.complete();
 
         List<Map<String, Object>> expected = refMessages.stream().filter(headers -> {
-            String name = (String) headers.get("studyName");
+            String uuid = (String) headers.get("studyUuid");
             String type = (String) headers.get("updateType");
             String substationsIds = (String) headers.get("substationsIds");
-            return (filterStudyName == null || filterStudyName.equals(name))
+            return (filterStudyUuid == null || filterStudyUuid.equals(uuid))
                     && (filterUpdateType == null || filterUpdateType.equals(type));
         }).collect(Collectors.toList());
         List<Map<String, Object>> actual = messages.stream().map(t -> {
@@ -134,7 +134,7 @@ public class NotificationWebSocketHandlerTest {
                 var deserializedHeaders = ((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class)).get("headers");
                 var mapRes = new HashMap<String, Object>();
 
-                mapRes.put("studyName", deserializedHeaders.get("studyName"));
+                mapRes.put("studyUuid", deserializedHeaders.get("studyUuid"));
                 if (deserializedHeaders.get("updateType") != null) {
                     mapRes.put("updateType", deserializedHeaders.get("updateType"));
                 }
@@ -205,7 +205,7 @@ public class NotificationWebSocketHandlerTest {
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
-        Map<String, Object> headers = Map.of("studyName", "foo", "updateType", "oof");
+        Map<String, Object> headers = Map.of("studyUuid", "foo", "updateType", "oof");
 
         sink.next(new GenericMessage<>("", headers)); // should be discarded, no client connected
 
