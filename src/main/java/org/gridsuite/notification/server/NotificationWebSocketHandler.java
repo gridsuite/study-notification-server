@@ -7,7 +7,6 @@
 package org.gridsuite.notification.server;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -16,6 +15,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,17 +28,13 @@ import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
- *
+ * <p>
  * Spring Cloud Stream gets the consumeNotification bean and calls it with the
  * flux from the broker. We call publish and connect to subscribe immediately to the flux
  * and multicast the messages to all connected websockets and to discard the messages when
@@ -51,13 +48,15 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
     private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
     private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
-    private static final String QUERY_STUDY_UUID = "studyUuid";
-    private static final String QUERY_UPDATE_TYPE = "updateType";
-    private static final String HEADER_STUDY_UUID = "studyUuid";
-    private static final String HEADER_UPDATE_TYPE = "updateType";
-    private static final String HEADER_TIMESTAMP = "timestamp";
-    private static final String HEADER_ERROR = "error";
-    private static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
+    static final String QUERY_STUDY_UUID = "studyUuid";
+    static final String QUERY_UPDATE_TYPE = "updateType";
+    static final String HEADER_USER_ID = "userId";
+    static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
+    static final String HEADER_UPDATE_TYPE = "updateType";
+    static final String HEADER_TIMESTAMP = "timestamp";
+    static final String HEADER_ERROR = "error";
+    static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -87,35 +86,37 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
      * map from the broker flux to the filtered flux for one websocket client, extracting only relevant fields.
      */
     private Flux<WebSocketMessage> notificationFlux(WebSocketSession webSocketSession,
+                                                    String userId,
                                                     String filterStudyUuid,
                                                     String filterUpdateType) {
-        return flux.transform(f -> {
-            Flux<Message<String>> res = f;
-            if (filterStudyUuid != null) {
-                res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
-            }
-            if (filterUpdateType != null) {
-                res = res.filter(m -> filterUpdateType.equals(m.getHeaders().get(HEADER_UPDATE_TYPE)));
-            }
-            return res;
-        }).map(m -> {
-            try {
-                Map<String, Object> headers = new HashMap<>();
-                headers.put(HEADER_TIMESTAMP, m.getHeaders().get(HEADER_TIMESTAMP));
-                headers.put(HEADER_STUDY_UUID, m.getHeaders().get(HEADER_STUDY_UUID));
-                headers.put(HEADER_UPDATE_TYPE, m.getHeaders().get(HEADER_UPDATE_TYPE));
-                headers.put(HEADER_ERROR, m.getHeaders().get(HEADER_ERROR));
-                if (m.getHeaders().get(HEADER_SUBSTATIONS_IDS) != null) {
-                    headers.put(HEADER_SUBSTATIONS_IDS, m.getHeaders().get(HEADER_SUBSTATIONS_IDS));
-                }
-                Map<String, Object> submap = Map.of(
-                        "payload", m.getPayload(),
-                        "headers", headers);
-                return jacksonObjectMapper.writeValueAsString(submap);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }).log(CATEGORY_WS_OUTPUT, Level.FINE).map(webSocketSession::textMessage);
+        return flux
+                .filter(new MessageFilter(userId, filterStudyUuid, filterUpdateType))
+                .map(m -> {
+                    try {
+                        return jacksonObjectMapper.writeValueAsString(Map.of(
+                                "payload", m.getPayload(),
+                                "headers", toResultHeader(m.getHeaders())));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).log(CATEGORY_WS_OUTPUT, Level.FINE).map(webSocketSession::textMessage);
+    }
+
+    static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
+        var resHeader = new HashMap<String, Object>();
+        resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
+        resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
+
+        if (messageHeader.get(HEADER_STUDY_UUID) != null) {
+            resHeader.put(HEADER_STUDY_UUID, messageHeader.get(HEADER_STUDY_UUID));
+        }
+        if (messageHeader.get(HEADER_ERROR) != null) {
+            resHeader.put(HEADER_ERROR, messageHeader.get(HEADER_ERROR));
+        }
+        if (messageHeader.get(HEADER_SUBSTATIONS_IDS) != null) {
+            resHeader.put(HEADER_SUBSTATIONS_IDS, messageHeader.get(HEADER_SUBSTATIONS_IDS));
+        }
+        return resHeader;
     }
 
     /**
@@ -128,7 +129,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
-        URI uri = webSocketSession.getHandshakeInfo().getUri();
+        var uri = webSocketSession.getHandshakeInfo().getUri();
+        String userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
         String filterStudyUuid = parameters.getFirst(QUERY_STUDY_UUID);
         if (filterStudyUuid != null) {
@@ -141,7 +143,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyUuid, filterUpdateType);
         return webSocketSession
-                .send(notificationFlux(webSocketSession, filterStudyUuid, filterUpdateType)
+                .send(notificationFlux(webSocketSession, userId, filterStudyUuid, filterUpdateType)
                         .mergeWith(heartbeatFlux(webSocketSession)))
                 .and(webSocketSession.receive());
     }
