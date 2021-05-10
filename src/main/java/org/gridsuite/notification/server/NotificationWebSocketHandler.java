@@ -53,6 +53,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
+    static final String HEADER_STUDY_NAME = "studyName";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
@@ -89,20 +90,33 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String userId,
                                                     String filterStudyUuid,
                                                     String filterUpdateType) {
-        return flux
-                .filter(new MessageFilter(userId, filterStudyUuid, filterUpdateType))
-                .map(m -> {
-                    try {
-                        return jacksonObjectMapper.writeValueAsString(Map.of(
-                                "payload", m.getPayload(),
-                                "headers", toResultHeader(m.getHeaders())));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).log(CATEGORY_WS_OUTPUT, Level.FINE).map(webSocketSession::textMessage);
+        return flux.transform(f -> {
+            Flux<Message<String>> res = f;
+            if (userId != null) {
+                res = res.filter(m -> {
+                    var headerIsPublicStudy = m.getHeaders().get(HEADER_IS_PUBLIC_STUDY, Boolean.class);
+                    return headerIsPublicStudy == null || headerIsPublicStudy || userId.equals(m.getHeaders().get(HEADER_USER_ID));
+                });
+            }
+            if (filterStudyUuid != null) {
+                res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
+            }
+            if (filterUpdateType != null) {
+                res = res.filter(m -> filterUpdateType.equals(m.getHeaders().get(HEADER_UPDATE_TYPE)));
+            }
+            return res;
+        }).map(m -> {
+            try {
+                return jacksonObjectMapper.writeValueAsString(Map.of(
+                        "payload", m.getPayload(),
+                        "headers", toResultHeader(m.getHeaders())));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }).log(CATEGORY_WS_OUTPUT, Level.FINE).map(webSocketSession::textMessage);
     }
 
-    static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
+    private static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
@@ -110,6 +124,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         if (messageHeader.get(HEADER_STUDY_UUID) != null) {
             resHeader.put(HEADER_STUDY_UUID, messageHeader.get(HEADER_STUDY_UUID));
         }
+
+        if (messageHeader.get(HEADER_STUDY_NAME) != null) {
+            resHeader.put(HEADER_STUDY_NAME, messageHeader.get(HEADER_STUDY_NAME));
+        }
+
         if (messageHeader.get(HEADER_ERROR) != null) {
             resHeader.put(HEADER_ERROR, messageHeader.get(HEADER_ERROR));
         }

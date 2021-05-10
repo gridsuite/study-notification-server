@@ -8,6 +8,7 @@ package org.gridsuite.notification.server;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -141,10 +142,19 @@ public class NotificationWebSocketHandlerTest {
         sink.complete();
 
         List<Map<String, Object>> expected = refMessages.stream()
-                .filter(new MessageFilter(connectedUserId, filterStudyUuid, filterUpdateType))
+                .filter(m -> {
+                    String studyUuid = (String) m.getHeaders().get(HEADER_STUDY_UUID);
+                    String userId = (String) m.getHeaders().get(HEADER_USER_ID);
+                    String updateType = (String) m.getHeaders().get(HEADER_UPDATE_TYPE);
+                    Boolean headerIsPublicStudy = m.getHeaders().get(HEADER_IS_PUBLIC_STUDY, Boolean.class);
+                    return (headerIsPublicStudy == null || headerIsPublicStudy || connectedUserId.equals(userId))
+                            && (filterStudyUuid == null || filterStudyUuid.equals(studyUuid))
+                            && (filterUpdateType == null || filterUpdateType.equals(updateType));
+                })
                 .map(GenericMessage::getHeaders)
                 .map(this::toResultHeader)
                 .collect(Collectors.toList());
+
         List<Map<String, Object>> actual = messages.stream().map(t -> {
             try {
                 return toResultHeader(((Map<String, Map<String, Object>>) objectMapper.readValue(t, Map.class)).get("headers"));
@@ -154,13 +164,30 @@ public class NotificationWebSocketHandlerTest {
         }).collect(Collectors.toList());
         assertEquals(expected, actual);
         assertNotEquals(0, actual.size());
-        assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("private_" + otherUserId)).collect(Collectors.toList()).size());
+        assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("private_" + otherUserId)).count());
     }
 
     private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
-        Map<String, Object> res = NotificationWebSocketHandler.toResultHeader(messageHeader);
-        res.remove(HEADER_TIMESTAMP);
-        return res;
+        var resHeader = new HashMap<String, Object>();
+        resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
+        resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
+
+        if (messageHeader.get(HEADER_STUDY_UUID) != null) {
+            resHeader.put(HEADER_STUDY_UUID, messageHeader.get(HEADER_STUDY_UUID));
+        }
+        if (messageHeader.get(HEADER_STUDY_NAME) != null) {
+            resHeader.put(HEADER_STUDY_NAME, messageHeader.get(HEADER_STUDY_NAME));
+        }
+        if (messageHeader.get(HEADER_ERROR) != null) {
+            resHeader.put(HEADER_ERROR, messageHeader.get(HEADER_ERROR));
+        }
+        if (messageHeader.get(HEADER_SUBSTATIONS_IDS) != null) {
+            resHeader.put(HEADER_SUBSTATIONS_IDS, messageHeader.get(HEADER_SUBSTATIONS_IDS));
+        }
+
+        resHeader.remove(HEADER_TIMESTAMP);
+
+        return resHeader;
     }
 
     @Test
