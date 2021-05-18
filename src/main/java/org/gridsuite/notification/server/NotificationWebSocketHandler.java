@@ -95,7 +95,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             if (userId != null) {
                 res = res.filter(m -> {
                     var headerIsPublicStudy = m.getHeaders().get(HEADER_IS_PUBLIC_STUDY, Boolean.class);
-                    return headerIsPublicStudy == null || headerIsPublicStudy || userId.equals(m.getHeaders().get(HEADER_USER_ID));
+                    return (m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID))) &&
+                            (headerIsPublicStudy == null || headerIsPublicStudy || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
                 });
             }
             if (filterStudyUuid != null) {

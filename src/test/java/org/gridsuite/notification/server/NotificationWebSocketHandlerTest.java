@@ -129,7 +129,8 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "public_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId, HEADER_IS_PUBLIC_STUDY, true),
                 Map.of(HEADER_STUDY_UUID, "private_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId, HEADER_IS_PUBLIC_STUDY, false),
                 Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true),
-                Map.of(HEADER_STUDY_UUID, "private_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, false))
+                Map.of(HEADER_STUDY_UUID, "private_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, false),
+                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true, HEADER_ERROR, "error_message"))
                 .map(map -> new GenericMessage<>("", map))
                 .collect(Collectors.toList());
 
@@ -147,7 +148,9 @@ public class NotificationWebSocketHandlerTest {
                     String userId = (String) m.getHeaders().get(HEADER_USER_ID);
                     String updateType = (String) m.getHeaders().get(HEADER_UPDATE_TYPE);
                     Boolean headerIsPublicStudy = m.getHeaders().get(HEADER_IS_PUBLIC_STUDY, Boolean.class);
-                    return (headerIsPublicStudy == null || headerIsPublicStudy || connectedUserId.equals(userId))
+                    String headerMessageError = (String) m.getHeaders().get(HEADER_ERROR);
+                    return (headerMessageError == null || connectedUserId.equals(userId))
+                            && (headerIsPublicStudy == null || headerIsPublicStudy || connectedUserId.equals(userId))
                             && (filterStudyUuid == null || filterStudyUuid.equals(studyUuid))
                             && (filterUpdateType == null || filterUpdateType.equals(updateType));
                 })
@@ -165,6 +168,7 @@ public class NotificationWebSocketHandlerTest {
         assertEquals(expected, actual);
         assertNotEquals(0, actual.size());
         assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("private_" + otherUserId)).count());
+        assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("public_" + otherUserId) && m.get(HEADER_ERROR) != null).count());
     }
 
     private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
