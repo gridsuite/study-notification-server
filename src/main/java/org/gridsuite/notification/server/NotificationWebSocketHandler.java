@@ -59,9 +59,10 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
     static final String HEADER_NODES = "NODES";
-    static final String HEADER_PARENT_NODE = "PARENT_NODE";
+    static final String HEADER_NODE = "NODE";
     static final String HEADER_NEW_NODE = "NEW_NODE";
     static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
+    static final String HEADER_INSERT_BEFORE = "INSERT_BEFORE";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -130,7 +131,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_STUDY_NAME);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
+        passHeader(messageHeader, resHeader, HEADER_NODE);
+        passHeader(messageHeader, resHeader, HEADER_INSERT_BEFORE);
         passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
         passHeader(messageHeader, resHeader, HEADER_NODES);
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
