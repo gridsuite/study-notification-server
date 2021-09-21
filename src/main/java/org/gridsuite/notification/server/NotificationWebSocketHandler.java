@@ -58,11 +58,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_NODES = "NODES";
-    static final String HEADER_NODE = "NODE";
-    static final String HEADER_NEW_NODE = "NEW_NODE";
-    static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
-    static final String HEADER_INSERT_BEFORE = "INSERT_BEFORE";
+    static final String HEADER_NODES = "nodes";
+    static final String HEADER_NODE = "node";
+    static final String HEADER_NEW_NODE = "newNode";
+    static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    static final String HEADER_INSERT_BEFORE = "insertBefore";
 
     private ObjectMapper jacksonObjectMapper;
 
