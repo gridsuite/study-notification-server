@@ -140,9 +140,9 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         return resHeader;
     }
 
-    private static void passHeader(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerStudyUuid) {
-        if (messageHeader.get(headerStudyUuid) != null) {
-            resHeader.put(headerStudyUuid, messageHeader.get(headerStudyUuid));
+    private static void passHeader(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+        if (messageHeader.get(headerName) != null) {
+            resHeader.put(headerName, messageHeader.get(headerName));
         }
     }
 

@@ -171,9 +171,6 @@ public class NotificationWebSocketHandlerTest {
                 throw new RuntimeException(e);
             }
         }).collect(Collectors.toList());
-        actual.forEach(System.err::println);
-        System.err.println("oups");
-        expected.forEach(System.err::println);
         assertEquals(expected, actual);
         assertNotEquals(0, actual.size());
         assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("private_" + otherUserId)).count());
