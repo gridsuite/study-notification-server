@@ -58,6 +58,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
+    static final String HEADER_NODES = "nodes";
+    static final String HEADER_NODE = "node";
+    static final String HEADER_NEW_NODE = "newNode";
+    static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    static final String HEADER_INSERT_BEFORE = "insertBefore";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -122,21 +127,23 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
-        if (messageHeader.get(HEADER_STUDY_UUID) != null) {
-            resHeader.put(HEADER_STUDY_UUID, messageHeader.get(HEADER_STUDY_UUID));
-        }
+        passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
+        passHeader(messageHeader, resHeader, HEADER_STUDY_NAME);
+        passHeader(messageHeader, resHeader, HEADER_ERROR);
+        passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
+        passHeader(messageHeader, resHeader, HEADER_NODE);
+        passHeader(messageHeader, resHeader, HEADER_INSERT_BEFORE);
+        passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
+        passHeader(messageHeader, resHeader, HEADER_NODES);
+        passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
 
-        if (messageHeader.get(HEADER_STUDY_NAME) != null) {
-            resHeader.put(HEADER_STUDY_NAME, messageHeader.get(HEADER_STUDY_NAME));
-        }
-
-        if (messageHeader.get(HEADER_ERROR) != null) {
-            resHeader.put(HEADER_ERROR, messageHeader.get(HEADER_ERROR));
-        }
-        if (messageHeader.get(HEADER_SUBSTATIONS_IDS) != null) {
-            resHeader.put(HEADER_SUBSTATIONS_IDS, messageHeader.get(HEADER_SUBSTATIONS_IDS));
-        }
         return resHeader;
+    }
+
+    private static void passHeader(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+        if (messageHeader.get(headerName) != null) {
+            resHeader.put(headerName, messageHeader.get(headerName));
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -130,7 +131,12 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "private_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId, HEADER_IS_PUBLIC_STUDY, false),
                 Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true),
                 Map.of(HEADER_STUDY_UUID, "private_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, false),
-                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true, HEADER_ERROR, "error_message"))
+                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true, HEADER_ERROR, "error_message"),
+
+                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "insert", HEADER_NODE, UUID.randomUUID().toString(), HEADER_NEW_NODE, UUID.randomUUID().toString(), HEADER_INSERT_BEFORE, true),
+                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "update", HEADER_NODES, List.of(UUID.randomUUID().toString())),
+                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "delete", HEADER_NODES, List.of(UUID.randomUUID().toString()),
+                    HEADER_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true))
                 .map(map -> new GenericMessage<>("", map))
                 .collect(Collectors.toList());
 
@@ -176,22 +182,25 @@ public class NotificationWebSocketHandlerTest {
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
-        if (messageHeader.get(HEADER_STUDY_UUID) != null) {
-            resHeader.put(HEADER_STUDY_UUID, messageHeader.get(HEADER_STUDY_UUID));
-        }
-        if (messageHeader.get(HEADER_STUDY_NAME) != null) {
-            resHeader.put(HEADER_STUDY_NAME, messageHeader.get(HEADER_STUDY_NAME));
-        }
-        if (messageHeader.get(HEADER_ERROR) != null) {
-            resHeader.put(HEADER_ERROR, messageHeader.get(HEADER_ERROR));
-        }
-        if (messageHeader.get(HEADER_SUBSTATIONS_IDS) != null) {
-            resHeader.put(HEADER_SUBSTATIONS_IDS, messageHeader.get(HEADER_SUBSTATIONS_IDS));
-        }
+        passHeaderRef(messageHeader, resHeader, HEADER_STUDY_UUID);
+        passHeaderRef(messageHeader, resHeader, HEADER_STUDY_NAME);
+        passHeaderRef(messageHeader, resHeader, HEADER_ERROR);
+        passHeaderRef(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
+        passHeaderRef(messageHeader, resHeader, HEADER_NEW_NODE);
+        passHeaderRef(messageHeader, resHeader, HEADER_NODES);
+        passHeaderRef(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
+        passHeaderRef(messageHeader, resHeader, HEADER_NODE);
+        passHeaderRef(messageHeader, resHeader, HEADER_INSERT_BEFORE);
 
         resHeader.remove(HEADER_TIMESTAMP);
 
         return resHeader;
+    }
+
+    private void passHeaderRef(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+        if (messageHeader.get(headerName) != null) {
+            resHeader.put(headerName, messageHeader.get(headerName));
+        }
     }
 
     @Test
