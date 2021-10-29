@@ -53,7 +53,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
-    static final String HEADER_STUDY_NAME = "studyName";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
@@ -130,7 +129,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
         passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
-        passHeader(messageHeader, resHeader, HEADER_STUDY_NAME);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
         passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
@@ -172,7 +170,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             }
         }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
-        LOGGER.debug("New websocket connection for studyName={}, updateType={}", filterStudyUuid, filterUpdateType);
+        LOGGER.debug("New websocket connection for studyUuid={}, updateType={}", filterStudyUuid, filterUpdateType);
         return webSocketSession
                 .send(notificationFlux(webSocketSession, userId, filterStudyUuid, filterUpdateType)
                         .mergeWith(heartbeatFlux(webSocketSession)))

@@ -185,7 +185,6 @@ public class NotificationWebSocketHandlerTest {
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
         passHeaderRef(messageHeader, resHeader, HEADER_STUDY_UUID);
-        passHeaderRef(messageHeader, resHeader, HEADER_STUDY_NAME);
         passHeaderRef(messageHeader, resHeader, HEADER_ERROR);
         passHeaderRef(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
         passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
