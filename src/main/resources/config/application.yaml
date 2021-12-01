@@ -8,4 +8,4 @@ spring:
     stream:
       bindings:
         consumeNotification-in-0:
-          destination: study.update
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
