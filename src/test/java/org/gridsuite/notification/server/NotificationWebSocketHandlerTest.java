@@ -135,10 +135,10 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "private_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, false),
                 Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_IS_PUBLIC_STUDY, true, HEADER_ERROR, "error_message"),
 
-                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "insert", HEADER_NODE, UUID.randomUUID().toString(), HEADER_NEW_NODE, UUID.randomUUID().toString(), HEADER_INSERT_BEFORE, true),
+                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "insert", HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_NEW_NODE, UUID.randomUUID().toString(), HEADER_INSERT_MODE, true),
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "update", HEADER_NODES, List.of(UUID.randomUUID().toString())),
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "delete", HEADER_NODES, List.of(UUID.randomUUID().toString()),
-                    HEADER_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true))
+                    HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true))
                 .map(map -> new GenericMessage<>("", map))
                 .collect(Collectors.toList());
 
@@ -192,8 +192,8 @@ public class NotificationWebSocketHandlerTest {
         passHeaderRef(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODES);
         passHeaderRef(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
-        passHeaderRef(messageHeader, resHeader, HEADER_NODE);
-        passHeaderRef(messageHeader, resHeader, HEADER_INSERT_BEFORE);
+        passHeaderRef(messageHeader, resHeader, HEADER_PARENT_NODE);
+        passHeaderRef(messageHeader, resHeader, HEADER_INSERT_MODE);
 
         resHeader.remove(HEADER_TIMESTAMP);
 
