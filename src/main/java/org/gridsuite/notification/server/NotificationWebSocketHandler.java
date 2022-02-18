@@ -60,10 +60,10 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
     static final String HEADER_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
     static final String HEADER_NODES = "nodes";
-    static final String HEADER_NODE = "node";
+    static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NEW_NODE = "newNode";
     static final String HEADER_REMOVE_CHILDREN = "removeChildren";
-    static final String HEADER_INSERT_BEFORE = "insertBefore";
+    static final String HEADER_INSERT_MODE = "insertMode";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -133,8 +133,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
         passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
         passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
-        passHeader(messageHeader, resHeader, HEADER_NODE);
-        passHeader(messageHeader, resHeader, HEADER_INSERT_BEFORE);
+        passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
+        passHeader(messageHeader, resHeader, HEADER_INSERT_MODE);
         passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
         passHeader(messageHeader, resHeader, HEADER_NODES);
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
