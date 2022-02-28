@@ -99,11 +99,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         return flux.transform(f -> {
             Flux<Message<String>> res = f;
             if (userId != null) {
-                res = res.filter(m -> {
-                    var headerIsPublicStudy = m.getHeaders().get(HEADER_IS_PUBLIC_STUDY, Boolean.class);
-                    return (m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID))) &&
-                            (headerIsPublicStudy == null || headerIsPublicStudy || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
-                });
+                res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
             }
             if (filterStudyUuid != null) {
                 res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
