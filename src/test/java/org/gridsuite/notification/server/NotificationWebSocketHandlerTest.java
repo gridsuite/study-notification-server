@@ -135,6 +135,7 @@ public class NotificationWebSocketHandlerTest {
 
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "insert", HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_NEW_NODE, UUID.randomUUID().toString(), HEADER_INSERT_MODE, true),
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "update", HEADER_NODES, List.of(UUID.randomUUID().toString())),
+                Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "update", HEADER_NODE, UUID.randomUUID().toString()),
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "delete", HEADER_NODES, List.of(UUID.randomUUID().toString()),
                     HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true))
                 .map(map -> new GenericMessage<>("", map))
@@ -186,6 +187,7 @@ public class NotificationWebSocketHandlerTest {
         passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
         passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
         passHeaderRef(messageHeader, resHeader, HEADER_NEW_NODE);
+        passHeaderRef(messageHeader, resHeader, HEADER_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODES);
         passHeaderRef(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
         passHeaderRef(messageHeader, resHeader, HEADER_PARENT_NODE);
