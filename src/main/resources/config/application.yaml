@@ -1,6 +1,6 @@
 spring:
   application:
-    name: notification-server
+    name: study-notification-server
 
   cloud:
     function:

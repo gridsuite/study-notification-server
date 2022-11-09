@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.notification.server;
+package org.gridsuite.study.notification.server;
 
 public class NotificationServerRuntimeException extends RuntimeException {
     public NotificationServerRuntimeException(String message) {

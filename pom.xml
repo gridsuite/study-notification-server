@@ -20,18 +20,18 @@
     </parent>
 
     <groupId>org.gridsuite</groupId>
-    <artifactId>gridsuite-notification-server</artifactId>
+    <artifactId>gridsuite-study-notification-server</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
-    <name>Notification server</name>
-    <description>Notification service</description>
+    <name>Study notification server</name>
+    <description>Study notification service</description>
     <url>http://www.gridsuite.org/</url>
 
     <scm>
-        <connection>scm:git:https://github.com/gridsuite/notification-server.git</connection>
-        <developerConnection>scm:git:https://github.com/gridsuite/notification-server.git</developerConnection>
-        <url>https://github.com/gridsuite/notification-server</url>
+        <connection>scm:git:https://github.com/gridsuite/study-notification-server.git</connection>
+        <developerConnection>scm:git:https://github.com/gridsuite/study-notification-server.git</developerConnection>
+        <url>https://github.com/gridsuite/study-notification-server</url>
     </scm>
 
     <developers>
@@ -45,7 +45,6 @@
 
     <properties>
         <java.version>11</java.version>
-
         <gridsuite-dependencies.version>20</gridsuite-dependencies.version>
     </properties>
 

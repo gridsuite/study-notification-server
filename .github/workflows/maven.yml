@@ -30,7 +30,7 @@ jobs:
           mvn --batch-mode -DskipTests sonar:sonar
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=gridsuite
-          -Dsonar.projectKey=org.gridsuite:notification-server
+          -Dsonar.projectKey=org.gridsuite:study-notification-server
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -40,7 +40,7 @@ jobs:
         run: >
           mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
-          -Djib.to.image=docker.io/gridsuite/notification-server
+          -Djib.to.image=docker.io/gridsuite/study-notification-server
           -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -49,7 +49,7 @@ jobs:
         run: >
           mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
-          -Djib.to.image=docker.io/gridsuite/notification-server:${GITHUB_REF_NAME#v}
+          -Djib.to.image=docker.io/gridsuite/study-notification-server:${GITHUB_REF_NAME#v}
           -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -58,4 +58,4 @@ jobs:
         uses: gridsuite/broadcast-event@main
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          event-type: notification_server_updated
+          event-type: study_notification_server_updated
