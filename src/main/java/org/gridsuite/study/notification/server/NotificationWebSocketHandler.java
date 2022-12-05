@@ -63,6 +63,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_NODES = "nodes";
     static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NEW_NODE = "newNode";
+    static final String HEADER_MOVED_NODE = "movedNode";
     static final String HEADER_REMOVE_CHILDREN = "removeChildren";
     static final String HEADER_INSERT_MODE = "insertMode";
 
@@ -136,6 +137,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_NODE);
         passHeader(messageHeader, resHeader, HEADER_NODES);
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
+        passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
 
         return resHeader;
     }
