@@ -52,7 +52,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String QUERY_UPDATE_TYPE = "updateType";
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
@@ -100,9 +99,10 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String filterUpdateType) {
         return flux.transform(f -> {
             Flux<Message<String>> res = f;
-            if (userId != null) {
-                res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
-            }
+            // code commented (waiting for refactor) to be able to receive the notification even when there is an error, then the front choose to display it or not
+//            if (userId != null) {
+//                res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
+//            }
             if (filterStudyUuid != null) {
                 res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
             }
@@ -138,6 +138,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_NODES);
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
+        passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
 
         return resHeader;
     }
