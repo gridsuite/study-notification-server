@@ -99,10 +99,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String filterUpdateType) {
         return flux.transform(f -> {
             Flux<Message<String>> res = f;
-            // code commented (waiting for refactor) to be able to receive the notification even when there is an error, then the front choose to display it or not
-//            if (userId != null) {
-//                res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
-//            }
             if (filterStudyUuid != null) {
                 res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
             }
