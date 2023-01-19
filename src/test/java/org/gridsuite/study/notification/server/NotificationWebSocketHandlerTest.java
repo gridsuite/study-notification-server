@@ -126,8 +126,7 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "foo bar/bar", HEADER_UPDATE_TYPE, "foobar"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "studies", HEADER_ERROR, "error_message"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_SUBSTATIONS_IDS, "s1"),
-                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_DELETED_EQUIPMENT_ID, "id1"),
-                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_DELETED_EQUIPMENT_TYPE, "type1"),
+                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_DELETED_EQUIPMENTS, "[{\"id\":\"equipmentId\",\"type\":\"equipmentType\"}]"),
 
                 Map.of(HEADER_STUDY_UUID, "public_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId),
                 Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId),
@@ -184,8 +183,7 @@ public class NotificationWebSocketHandlerTest {
         passHeaderRef(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeaderRef(messageHeader, resHeader, HEADER_ERROR);
         passHeaderRef(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
-        passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
+        passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENTS);
         passHeaderRef(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODES);

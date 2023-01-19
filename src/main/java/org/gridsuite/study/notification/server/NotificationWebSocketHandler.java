@@ -57,8 +57,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
-    static final String HEADER_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
+    static final String HEADER_DELETED_EQUIPMENTS = "deletedEquipments";
     static final String HEADER_NODE = "node";
     static final String HEADER_NODES = "nodes";
     static final String HEADER_PARENT_NODE = "parentNode";
@@ -129,8 +128,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
-        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
+        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENTS);
         passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
         passHeader(messageHeader, resHeader, HEADER_INSERT_MODE);
         passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
