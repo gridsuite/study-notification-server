@@ -8,8 +8,10 @@
 package org.gridsuite.study.notification.server.payload;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor
 public class EquipmentDeletionNotification {
     String id;
     String type;
