@@ -17,6 +17,8 @@ import java.util.logging.Level;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.gridsuite.study.notification.server.payload.NetworkImpactsNotificationPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -75,12 +77,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         this.heartbeatInterval = heartbeatInterval;
     }
 
-    Flux<Message<String>> flux;
+    Flux<Message<NetworkImpactsNotificationPayload>> flux;
 
     @Bean
-    public Consumer<Flux<Message<String>>> consumeNotification() {
+    public Consumer<Flux<Message<NetworkImpactsNotificationPayload>>> consumeNotification() {
         return f -> {
-            ConnectableFlux<Message<String>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
+            ConnectableFlux<Message<NetworkImpactsNotificationPayload>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.
@@ -98,7 +100,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String filterStudyUuid,
                                                     String filterUpdateType) {
         return flux.transform(f -> {
-            Flux<Message<String>> res = f;
+            Flux<Message<NetworkImpactsNotificationPayload>> res = f;
             if (userId != null) {
                 res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
             }
