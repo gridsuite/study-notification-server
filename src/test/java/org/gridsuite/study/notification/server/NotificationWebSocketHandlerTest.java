@@ -152,11 +152,8 @@ public class NotificationWebSocketHandlerTest {
         List<Map<String, Object>> expected = refMessages.stream()
                 .filter(m -> {
                     String studyUuid = (String) m.getHeaders().get(HEADER_STUDY_UUID);
-                    String userId = (String) m.getHeaders().get(HEADER_USER_ID);
                     String updateType = (String) m.getHeaders().get(HEADER_UPDATE_TYPE);
-                    String headerMessageError = (String) m.getHeaders().get(HEADER_ERROR);
-                    return (headerMessageError == null || connectedUserId.equals(userId))
-                            && (filterStudyUuid == null || filterStudyUuid.equals(studyUuid))
+                    return (filterStudyUuid == null || filterStudyUuid.equals(studyUuid))
                             && (filterUpdateType == null || filterUpdateType.equals(updateType));
                 })
                 .map(GenericMessage::getHeaders)
@@ -173,7 +170,6 @@ public class NotificationWebSocketHandlerTest {
         assertEquals(expected, actual);
         assertNotEquals(0, actual.size());
         assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("private_" + otherUserId)).count());
-        assertEquals(0, actual.stream().filter(m -> m.get(HEADER_STUDY_UUID).equals("public_" + otherUserId) && m.get(HEADER_ERROR) != null).count());
     }
 
     private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
