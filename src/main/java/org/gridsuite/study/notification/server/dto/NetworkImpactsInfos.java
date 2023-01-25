@@ -5,7 +5,7 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-package org.gridsuite.study.notification.server.payload;
+package org.gridsuite.study.notification.server.dto;
 
 import java.util.Set;
 
@@ -14,7 +14,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class NetworkImpactsNotificationPayload {
+public class NetworkImpactsInfos {
     private Set<String> impactedSubstationsIds;
-    private Set<EquipmentDeletionNotification> deletedEquipments;
+    private Set<EquipmentDeletionInfos> deletedEquipments;
 }

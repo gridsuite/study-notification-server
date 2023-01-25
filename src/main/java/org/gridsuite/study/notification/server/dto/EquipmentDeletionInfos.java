@@ -5,14 +5,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.notification.server.payload;
+package org.gridsuite.study.notification.server.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class EquipmentDeletionNotification {
+public class EquipmentDeletionInfos {
     String id;
     String type;
 }

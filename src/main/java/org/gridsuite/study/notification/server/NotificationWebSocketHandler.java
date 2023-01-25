@@ -18,7 +18,7 @@ import java.util.logging.Level;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.gridsuite.study.notification.server.payload.NetworkImpactsNotificationPayload;
+import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -76,12 +76,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         this.heartbeatInterval = heartbeatInterval;
     }
 
-    Flux<Message<NetworkImpactsNotificationPayload>> flux;
+    Flux<Message<NetworkImpactsInfos>> flux;
 
     @Bean
-    public Consumer<Flux<Message<NetworkImpactsNotificationPayload>>> consumeNotification() {
+    public Consumer<Flux<Message<NetworkImpactsInfos>>> consumeNotification() {
         return f -> {
-            ConnectableFlux<Message<NetworkImpactsNotificationPayload>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
+            ConnectableFlux<Message<NetworkImpactsInfos>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.
@@ -98,7 +98,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String filterStudyUuid,
                                                     String filterUpdateType) {
         return flux.transform(f -> {
-            Flux<Message<NetworkImpactsNotificationPayload>> res = f;
+            Flux<Message<NetworkImpactsInfos>> res = f;
             if (filterStudyUuid != null) {
                 res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
             }
@@ -125,7 +125,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENTS);
         passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
         passHeader(messageHeader, resHeader, HEADER_INSERT_MODE);
         passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
