@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class EquipmentDeletionInfos {
-    String id;
-    String type;
+    String equipmentId;
+    String equipmentType;
 }
 
