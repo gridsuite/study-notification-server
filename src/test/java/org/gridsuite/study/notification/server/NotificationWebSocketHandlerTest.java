@@ -19,6 +19,10 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
+
+import org.gridsuite.study.notification.server.dto.EquipmentDeletionInfos;
+import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,7 +56,6 @@ public class NotificationWebSocketHandlerTest {
     private ObjectMapper objectMapper;
     private WebSocketSession ws;
     private HandshakeInfo handshakeinfo;
-    private Flux<Message<String>> flux;
 
     @Before
     public void setup() {
@@ -106,13 +109,13 @@ public class NotificationWebSocketHandlerTest {
         setUpUriComponentBuilder(connectedUserId, filterStudyUuid, filterUpdateType);
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
-        var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
+        var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
         notificationWebSocketHandler.handle(ws);
 
-        List<GenericMessage<String>> refMessages = Stream.<Map<String, Object>>of(
+        List<GenericMessage<NetworkImpactsInfos>> refMessages = Stream.<Map<String, Object>>of(
                 Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "oof"),
                 Map.of(HEADER_STUDY_UUID, "baz", HEADER_UPDATE_TYPE, "oof"),
@@ -126,8 +129,6 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "foo bar/bar", HEADER_UPDATE_TYPE, "foobar"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "studies", HEADER_ERROR, "error_message"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_SUBSTATIONS_IDS, "s1"),
-                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_DELETED_EQUIPMENT_ID, "id1"),
-                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_DELETED_EQUIPMENT_TYPE, "type1"),
 
                 Map.of(HEADER_STUDY_UUID, "public_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId),
                 Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId),
@@ -138,7 +139,7 @@ public class NotificationWebSocketHandlerTest {
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "update", HEADER_NODE, UUID.randomUUID().toString()),
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "delete", HEADER_NODES, List.of(UUID.randomUUID().toString()),
                     HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true))
-                .map(map -> new GenericMessage<>("", map))
+                .map(map -> new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), map))
                 .collect(Collectors.toList());
 
         @SuppressWarnings("unchecked")
@@ -184,8 +185,6 @@ public class NotificationWebSocketHandlerTest {
         passHeaderRef(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeaderRef(messageHeader, resHeader, HEADER_ERROR);
         passHeaderRef(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
-        passHeaderRef(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
         passHeaderRef(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_NODES);
@@ -234,7 +233,7 @@ public class NotificationWebSocketHandlerTest {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(null, 1);
-        var flux = Flux.<Message<String>>empty();
+        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.handle(ws);
 
@@ -249,13 +248,13 @@ public class NotificationWebSocketHandlerTest {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
-        var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
+        var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
         Map<String, Object> headers = Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof");
 
-        sink.next(new GenericMessage<>("", headers)); // should be discarded, no client connected
+        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), headers)); // should be discarded, no client connected
 
         notificationWebSocketHandler.handle(ws);
 
@@ -266,7 +265,7 @@ public class NotificationWebSocketHandlerTest {
         Disposable d1 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
         d1.dispose();
 
-        sink.next(new GenericMessage<>("", headers)); // should be discarded, first client disconnected
+        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), headers)); // should be discarded, first client disconnected
 
         notificationWebSocketHandler.handle(ws);
 

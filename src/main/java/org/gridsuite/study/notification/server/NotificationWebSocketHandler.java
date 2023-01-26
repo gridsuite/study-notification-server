@@ -17,6 +17,8 @@ import java.util.logging.Level;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,8 +59,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
-    static final String HEADER_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
+    static final String HEADER_DELETED_EQUIPMENTS = "deletedEquipments";
     static final String HEADER_NODE = "node";
     static final String HEADER_NODES = "nodes";
     static final String HEADER_PARENT_NODE = "parentNode";
@@ -76,12 +77,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         this.heartbeatInterval = heartbeatInterval;
     }
 
-    Flux<Message<String>> flux;
+    Flux<Message<NetworkImpactsInfos>> flux;
 
     @Bean
-    public Consumer<Flux<Message<String>>> consumeNotification() {
+    public Consumer<Flux<Message<NetworkImpactsInfos>>> consumeNotification() {
         return f -> {
-            ConnectableFlux<Message<String>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
+            ConnectableFlux<Message<NetworkImpactsInfos>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.
@@ -99,7 +100,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                                                     String filterStudyUuid,
                                                     String filterUpdateType) {
         return flux.transform(f -> {
-            Flux<Message<String>> res = f;
+            Flux<Message<NetworkImpactsInfos>> res = f;
             if (userId != null) {
                 res = res.filter(m -> m.getHeaders().get(HEADER_ERROR) == null || userId.equals(m.getHeaders().get(HEADER_USER_ID)));
             }
@@ -129,8 +130,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_ID);
-        passHeader(messageHeader, resHeader, HEADER_DELETED_EQUIPMENT_TYPE);
         passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
         passHeader(messageHeader, resHeader, HEADER_INSERT_MODE);
         passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
