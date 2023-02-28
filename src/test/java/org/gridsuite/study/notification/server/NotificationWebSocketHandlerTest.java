@@ -8,6 +8,7 @@ package org.gridsuite.study.notification.server;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -15,10 +16,10 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.ImmutableSet;
 
-import org.gridsuite.study.notification.server.dto.EquipmentDeletionInfos;
-import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
+import org.gridsuite.study.notification.server.dto.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,8 +40,7 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -276,6 +276,95 @@ public class NotificationWebSocketHandlerTest {
     @Test
     public void testEncodingCharactersInUrl() {
         withFilters("foo bar/bar", "foobar", true);
+    }
+
+    @Test
+    public void testWsReceiveFilters() throws JsonProcessingException {
+        setUpUriComponentBuilder("userId");
+        var dataBufferFactory = new DefaultDataBufferFactory();
+
+        var map = new ConcurrentHashMap<String, Object>();
+        FiltersToAdd filtersToAdd = new FiltersToAdd("updateTypeFilter", "studyUuid");
+        FiltersToRemove filtersToRemove = new FiltersToRemove(false, null);
+        Filters filters = new Filters(filtersToAdd, filtersToRemove);
+        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        String json = ow.writeValueAsString(filters);
+        when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap(json.getBytes()))));
+        when(ws2.getAttributes()).thenReturn(map);
+
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), 60);
+        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        notificationWebSocketHandler.consumeNotification().accept(flux);
+        notificationWebSocketHandler.receive(ws2).subscribe();
+
+        assertEquals("updateTypeFilter", map.get(FILTER_UPDATE_TYPE));
+        assertEquals("studyUuid", map.get(FILTER_STUDY_UUID));
+    }
+
+    @Test
+    public void testWsRemoveFilters() throws JsonProcessingException {
+        setUpUriComponentBuilder("userId");
+        var dataBufferFactory = new DefaultDataBufferFactory();
+
+        var map = new ConcurrentHashMap<String, Object>();
+        map.put(FILTER_UPDATE_TYPE, "updateType");
+        map.put(FILTER_STUDY_UUID, "studyUuid");
+        FiltersToAdd filtersToAdd = new FiltersToAdd();
+        FiltersToRemove filtersToRemove = new FiltersToRemove(true, true);
+        Filters filters = new Filters(filtersToAdd, filtersToRemove);
+        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        String json = ow.writeValueAsString(filters);
+        when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap(json.getBytes()))));
+        when(ws2.getAttributes()).thenReturn(map);
+
+        assertEquals("updateType", ws2.getAttributes().get(FILTER_UPDATE_TYPE));
+        assertEquals("studyUuid", ws2.getAttributes().get(FILTER_STUDY_UUID));
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), Integer.MAX_VALUE);
+        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        notificationWebSocketHandler.consumeNotification().accept(flux);
+        notificationWebSocketHandler.receive(ws2).subscribe();
+
+        assertNull(ws2.getAttributes().get(FILTER_UPDATE_TYPE));
+        assertNull(ws2.getAttributes().get(FILTER_STUDY_UUID));
+    }
+
+    @Test
+    public void testWsReceiveEmptyFilters() throws JsonProcessingException {
+        setUpUriComponentBuilder("userId");
+        var dataBufferFactory = new DefaultDataBufferFactory();
+
+        var map = new ConcurrentHashMap<String, Object>();
+        Filters filters = new Filters();
+        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        String json = ow.writeValueAsString(filters);
+        when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap(json.getBytes()))));
+        when(ws2.getAttributes()).thenReturn(map);
+
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), Integer.MAX_VALUE);
+        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        notificationWebSocketHandler.consumeNotification().accept(flux);
+        notificationWebSocketHandler.receive(ws2).subscribe();
+
+        assertNull(map.get(FILTER_UPDATE_TYPE));
+        assertNull(map.get(FILTER_STUDY_UUID));
+    }
+
+    @Test
+    public void testWsReceiveUnprocessableFilter() {
+        setUpUriComponentBuilder("userId");
+        var dataBufferFactory = new DefaultDataBufferFactory();
+
+        var map = new ConcurrentHashMap<String, Object>();
+        when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap("UnprocessableFilter".getBytes()))));
+        when(ws2.getAttributes()).thenReturn(map);
+
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), 60);
+        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        notificationWebSocketHandler.consumeNotification().accept(flux);
+        notificationWebSocketHandler.receive(ws2).subscribe();
+
+        assertNull(map.get(FILTER_UPDATE_TYPE));
+        assertNull(map.get(FILTER_STUDY_UUID));
     }
 
     @Test
