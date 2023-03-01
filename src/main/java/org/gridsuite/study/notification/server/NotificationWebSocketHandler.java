@@ -163,7 +163,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                             handleReceivedFilters(webSocketSession, receivedFilters);
                         }
                     } catch (JsonProcessingException e) {
-                        LOGGER.error(e.toString());
+                        LOGGER.error(e.toString(), e);
                     }
                 });
     }
