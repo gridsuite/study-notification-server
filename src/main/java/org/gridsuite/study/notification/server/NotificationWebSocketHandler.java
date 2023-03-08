@@ -18,6 +18,9 @@ import java.util.logging.Level;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.gridsuite.study.notification.server.dto.Filters;
+import org.gridsuite.study.notification.server.dto.FiltersToAdd;
+import org.gridsuite.study.notification.server.dto.FiltersToRemove;
 import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +54,9 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
     private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
     static final String QUERY_STUDY_UUID = "studyUuid";
+    static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
     static final String QUERY_UPDATE_TYPE = "updateType";
+    static final String FILTER_UPDATE_TYPE = QUERY_UPDATE_TYPE;
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_UPDATE_TYPE = "updateType";
@@ -94,18 +99,13 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     /**
      * map from the broker flux to the filtered flux for one websocket client, extracting only relevant fields.
      */
-    private Flux<WebSocketMessage> notificationFlux(WebSocketSession webSocketSession,
-                                                    String filterStudyUuid,
-                                                    String filterUpdateType) {
-        return flux.transform(f -> {
-            Flux<Message<NetworkImpactsInfos>> res = f;
-            if (filterStudyUuid != null) {
-                res = res.filter(m -> filterStudyUuid.equals(m.getHeaders().get(HEADER_STUDY_UUID)));
-            }
-            if (filterUpdateType != null) {
-                res = res.filter(m -> filterUpdateType.equals(m.getHeaders().get(HEADER_UPDATE_TYPE)));
-            }
-            return res;
+    private Flux<WebSocketMessage> notificationFlux(WebSocketSession webSocketSession) {
+        return flux.filter(message -> {
+            String filterStudyUuid = (String) webSocketSession.getAttributes().get(FILTER_STUDY_UUID);
+            return filterStudyUuid == null || filterStudyUuid.equals(message.getHeaders().get(HEADER_STUDY_UUID));
+        }).filter(message -> {
+            String filterUpdateType = (String) webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE);
+            return filterUpdateType == null || filterUpdateType.equals(message.getHeaders().get(HEADER_UPDATE_TYPE));
         }).map(m -> {
             try {
                 return jacksonObjectMapper.writeValueAsString(Map.of(
@@ -151,6 +151,45 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                 .pingMessage(dbf -> dbf.wrap((webSocketSession.getId() + "-" + n).getBytes(StandardCharsets.UTF_8))));
     }
 
+    public Flux<WebSocketMessage> receive(WebSocketSession webSocketSession) {
+        return webSocketSession.receive()
+                .doOnNext(webSocketMessage -> {
+                    try {
+                        //if it's not the heartbeat
+                        if (webSocketMessage.getType().equals(WebSocketMessage.Type.TEXT)) {
+                            String wsPayload = webSocketMessage.getPayloadAsText();
+                            LOGGER.debug("Message received : {} by session {}", wsPayload, webSocketSession.getId());
+                            Filters receivedFilters = jacksonObjectMapper.readValue(webSocketMessage.getPayloadAsText(), Filters.class);
+                            handleReceivedFilters(webSocketSession, receivedFilters);
+                        }
+                    } catch (JsonProcessingException e) {
+                        LOGGER.error(e.toString(), e);
+                    }
+                });
+    }
+
+    private void handleReceivedFilters(WebSocketSession webSocketSession, Filters filters) {
+        if (filters.getFiltersToRemove() != null) {
+            FiltersToRemove filtersToRemove = filters.getFiltersToRemove();
+            if (Boolean.TRUE.equals(filtersToRemove.getRemoveUpdateType())) {
+                webSocketSession.getAttributes().remove(FILTER_UPDATE_TYPE);
+            }
+            if (Boolean.TRUE.equals(filtersToRemove.getRemoveStudyUuid())) {
+                webSocketSession.getAttributes().remove(FILTER_STUDY_UUID);
+            }
+        }
+        if (filters.getFiltersToAdd() != null) {
+            FiltersToAdd filtersToAdd = filters.getFiltersToAdd();
+            //because null is not allowed in ConcurrentHashMap and will cause the websocket to close
+            if (filtersToAdd.getUpdateType() != null) {
+                webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filtersToAdd.getUpdateType());
+            }
+            if (filtersToAdd.getStudyUuid() != null) {
+                webSocketSession.getAttributes().put(FILTER_STUDY_UUID, filtersToAdd.getStudyUuid());
+            }
+        }
+    }
+
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
@@ -159,15 +198,20 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         if (filterStudyUuid != null) {
             try {
                 filterStudyUuid = URLDecoder.decode(filterStudyUuid, StandardCharsets.UTF_8.toString());
+                webSocketSession.getAttributes().put(FILTER_STUDY_UUID, filterStudyUuid);
             } catch (UnsupportedEncodingException e) {
                 throw new NotificationServerRuntimeException(e.getMessage());
             }
         }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
+        if (filterUpdateType != null) {
+            webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filterUpdateType);
+        }
+
         LOGGER.debug("New websocket connection for studyUuid={}, updateType={}", filterStudyUuid, filterUpdateType);
         return webSocketSession
-                .send(notificationFlux(webSocketSession, filterStudyUuid, filterUpdateType)
+                .send(notificationFlux(webSocketSession)
                         .mergeWith(heartbeatFlux(webSocketSession)))
-                .and(webSocketSession.receive());
+                .and(receive(webSocketSession));
     }
 }
