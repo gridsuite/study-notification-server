@@ -55,7 +55,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
     private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
     private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
-    static final String QUERY_USER_NAME = "userName";
     static final String QUERY_STUDY_UUID = "studyUuid";
     static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
     static final String QUERY_UPDATE_TYPE = "updateType";
@@ -225,18 +224,20 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         return webSocketSession
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
                 .and(receive(webSocketSession))
-                .doFirst(() -> updateConnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME)))
-                .doFinally(s -> updateDisconnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME)));
+                .doFirst(() -> updateConnectionMetrics(webSocketSession))
+                .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
     }
 
-    private void updateConnectionMetrics(WebSocketSession webSocketSession, String userName) {
-        LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userName,
+    private void updateConnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
-        userConnections.compute(userName, (k, v) -> (v == null) ? 0 : v + 1);
+        userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
     }
 
-    private void updateDisconnectionMetrics(WebSocketSession webSocketSession, String userName) {
-        LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userName);
-        userConnections.computeIfPresent(userName, (n, v) -> v > 1 ? v - 1 : null);
+    private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
+        userConnections.computeIfPresent(userId, (n, v) -> v > 1 ? v - 1 : null);
     }
 }
