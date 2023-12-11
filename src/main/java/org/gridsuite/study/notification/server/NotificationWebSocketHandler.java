@@ -33,9 +33,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -81,7 +81,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     private final int heartbeatInterval;
 
-    private final Map<String, AtomicInteger> userConnections = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, AtomicInteger> userConnections = new ConcurrentHashMap<>();
 
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
@@ -223,14 +223,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filterUpdateType);
         }
 
-        updateConnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME));
-
         return webSocketSession
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
                 .and(receive(webSocketSession))
-                .doFinally(s ->
-                        updateDisconnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME))
-                );
+                .doFirst(() -> updateConnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME)))
+                .doFinally(s -> updateDisconnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME)));
     }
 
     private void updateConnectionMetrics(WebSocketSession webSocketSession, String userName) {
