@@ -232,11 +232,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private void updateConnectionMetrics(WebSocketSession webSocketSession, String userName) {
         LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userName,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
-        userConnections.compute(userName, (k, v) -> (v == null) ? 0 : ++v);
+        userConnections.compute(userName, (k, v) -> (v == null) ? 0 : v + 1);
     }
 
     private void updateDisconnectionMetrics(WebSocketSession webSocketSession, String userName) {
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userName);
-        userConnections.computeIfPresent(userName, (n, v) -> v > 1 ? --v : null);
+        userConnections.computeIfPresent(userName, (n, v) -> v > 1 ? v - 1 : null);
     }
 }
