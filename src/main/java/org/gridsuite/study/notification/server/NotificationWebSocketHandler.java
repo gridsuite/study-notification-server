@@ -241,6 +241,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
-        userConnections.computeIfPresent(userId, (n, v) -> v > 1 ? v - 1 : null);
+        userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
     }
 }
