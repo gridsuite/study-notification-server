@@ -6,18 +6,10 @@
  */
 package org.gridsuite.study.notification.server;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.logging.Level;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.gridsuite.study.notification.server.dto.Filters;
 import org.gridsuite.study.notification.server.dto.FiltersToAdd;
 import org.gridsuite.study.notification.server.dto.FiltersToRemove;
@@ -37,6 +29,17 @@ import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
  * <p>
@@ -53,6 +56,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationWebSocketHandler.class);
     private static final String CATEGORY_BROKER_INPUT = NotificationWebSocketHandler.class.getName() + ".messages.input-broker";
     private static final String CATEGORY_WS_OUTPUT = NotificationWebSocketHandler.class.getName() + ".messages.output-websocket";
+    static final String QUERY_USER_NAME = "userName";
     static final String QUERY_STUDY_UUID = "studyUuid";
     static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
     static final String QUERY_UPDATE_TYPE = "updateType";
@@ -63,7 +67,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_DELETED_EQUIPMENTS = "deletedEquipments";
     static final String HEADER_NODE = "node";
     static final String HEADER_NODES = "nodes";
     static final String HEADER_PARENT_NODE = "parentNode";
@@ -74,13 +77,21 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
 
-    private ObjectMapper jacksonObjectMapper;
+    private final ObjectMapper jacksonObjectMapper;
 
-    private int heartbeatInterval;
+    private final int heartbeatInterval;
 
-    public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
+    private final Map<String, AtomicInteger> userConnections = Collections.synchronizedMap(new HashMap<>());
+
+    public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.heartbeatInterval = heartbeatInterval;
+        initMetrics(meterRegistry);
+    }
+
+    private void initMetrics(MeterRegistry meterRegistry) {
+        Gauge.builder("app.users", userConnections::size).register(meterRegistry);
+        Gauge.builder("app.connections", () -> userConnections.values().stream().mapToInt(AtomicInteger::get).sum()).register(meterRegistry);
     }
 
     Flux<Message<NetworkImpactsInfos>> flux;
@@ -93,7 +104,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.
             // Otherwise, reactorcore buffers some messages (not until the connectable flux had
-            // at least one subscriber. Is there a better way ?
+            // at least one subscriber). Is there a better way ?
             c.subscribe();
         };
     }
@@ -212,10 +223,28 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filterUpdateType);
         }
 
-        LOGGER.debug("New websocket connection for studyUuid={}, updateType={}", filterStudyUuid, filterUpdateType);
+        updateConnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME));
+
         return webSocketSession
-                .send(notificationFlux(webSocketSession)
-                        .mergeWith(heartbeatFlux(webSocketSession)))
-                .and(receive(webSocketSession));
+                .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
+                .and(receive(webSocketSession))
+                .doFinally(s ->
+                        updateDisconnectionMetrics(webSocketSession, parameters.getFirst(QUERY_USER_NAME))
+                );
+    }
+
+    private void updateConnectionMetrics(WebSocketSession webSocketSession, String userName) {
+        LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userName,
+                webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
+        userConnections
+                .computeIfAbsent(userName, k -> new AtomicInteger(0))
+                .incrementAndGet();
+    }
+
+    private void updateDisconnectionMetrics(WebSocketSession webSocketSession, String userName) {
+        LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userName);
+        if (userConnections.get(userName).decrementAndGet() == 0) {
+            userConnections.remove(userName);
+        }
     }
 }

@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.ImmutableSet;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.gridsuite.study.notification.server.dto.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,6 +55,8 @@ public class NotificationWebSocketHandlerTest {
     private WebSocketSession ws;
     private WebSocketSession ws2;
     private HandshakeInfo handshakeinfo;
+
+    private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @Before
     public void setup() {
@@ -128,7 +132,7 @@ public class NotificationWebSocketHandlerTest {
             setUpUriComponentBuilder(connectedUserId);
         }
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
         var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
@@ -295,7 +299,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap(json.getBytes()))));
         when(ws2.getAttributes()).thenReturn(map);
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), 60);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, 60);
         var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
@@ -322,7 +326,7 @@ public class NotificationWebSocketHandlerTest {
 
         assertEquals("updateType", ws2.getAttributes().get(FILTER_UPDATE_TYPE));
         assertEquals("studyUuid", ws2.getAttributes().get(FILTER_STUDY_UUID));
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), Integer.MAX_VALUE);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, Integer.MAX_VALUE);
         var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
@@ -343,7 +347,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap(json.getBytes()))));
         when(ws2.getAttributes()).thenReturn(map);
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), Integer.MAX_VALUE);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, Integer.MAX_VALUE);
         var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
@@ -361,7 +365,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.receive()).thenReturn(Flux.just(new WebSocketMessage(WebSocketMessage.Type.TEXT, dataBufferFactory.wrap("UnprocessableFilter".getBytes()))));
         when(ws2.getAttributes()).thenReturn(map);
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), 60);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, 60);
         var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
@@ -374,7 +378,7 @@ public class NotificationWebSocketHandlerTest {
     public void testHeartbeat() {
         setUpUriComponentBuilder("userId");
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(null, 1);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(null, meterRegistry, 1);
         var flux = Flux.<Message<NetworkImpactsInfos>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.handle(ws);
@@ -389,7 +393,7 @@ public class NotificationWebSocketHandlerTest {
     public void testDiscard() {
         setUpUriComponentBuilder("userId");
 
-        var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, Integer.MAX_VALUE);
+        var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
         var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
