@@ -36,7 +36,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
@@ -81,7 +80,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     private final int heartbeatInterval;
 
-    private final Map<String, AtomicInteger> userConnections = new ConcurrentHashMap<>();
+    private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
@@ -91,7 +90,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     private void initMetrics(MeterRegistry meterRegistry) {
         Gauge.builder("app.users", userConnections::size).register(meterRegistry);
-        Gauge.builder("app.connections", () -> userConnections.values().stream().mapToInt(AtomicInteger::get).sum()).register(meterRegistry);
+        Gauge.builder("app.connections", () -> userConnections.values().stream().mapToInt(Integer::intValue).sum()).register(meterRegistry);
     }
 
     Flux<Message<NetworkImpactsInfos>> flux;
@@ -233,15 +232,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     private void updateConnectionMetrics(WebSocketSession webSocketSession, String userName) {
         LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userName,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
-        userConnections
-                .computeIfAbsent(userName, k -> new AtomicInteger(0))
-                .incrementAndGet();
+        userConnections.compute(userName, (k, v) -> (v == null) ? 0 : ++v);
     }
 
     private void updateDisconnectionMetrics(WebSocketSession webSocketSession, String userName) {
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userName);
-        if (userConnections.get(userName).decrementAndGet() == 0) {
-            userConnections.remove(userName);
-        }
+        userConnections.computeIfPresent(userName, (n, v) -> v > 1 ? --v : null);
     }
 }
