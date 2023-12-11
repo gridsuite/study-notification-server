@@ -6,18 +6,28 @@
  */
 package org.gridsuite.study.notification.server;
 
-import java.net.URI;
-
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
+
+import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
@@ -31,13 +41,43 @@ public class NotificationWebSocketIT {
     @LocalServerPort
     private String port;
 
+    @Autowired
+    private MeterRegistry meterRegistry;
+
     @Test
     public void echo() {
         WebSocketClient client = new StandardWebSocketClient();
-        client.execute(getUrl("/notify"), WebSocketSession::close).block();
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(HEADER_USER_ID, "test");
+        client.execute(getUrl("/notify"), httpHeaders, WebSocketSession::close).block();
+    }
+
+    @Test
+    public void metrics() {
+        WebSocketClient client = new StandardWebSocketClient();
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(HEADER_USER_ID, "test");
+        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections()).block();
+        testMeter(USERS_METER_NAME, 0);
+        testMeter(CONNECTIONS_METER_NAME, 0);
     }
 
     protected URI getUrl(String path) {
         return URI.create("ws://localhost:" + this.port + path);
+    }
+
+    private class WebSocketHandlerTestConnections implements WebSocketHandler {
+        @Override
+        public Mono<Void> handle(WebSocketSession webSocketSession) {
+            testMeter(USERS_METER_NAME, 1);
+            testMeter(CONNECTIONS_METER_NAME, 1);
+            return webSocketSession.close();
+        }
+    }
+
+    private void testMeter(String name, double val) {
+        Meter meter = meterRegistry.get(name).meter();
+        assertNotNull(meter);
+        assertEquals(val, meter.measure().iterator().next().getValue(), 0);
     }
 }

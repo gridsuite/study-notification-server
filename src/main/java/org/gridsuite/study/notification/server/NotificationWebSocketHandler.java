@@ -75,6 +75,9 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
 
+    static final String USERS_METER_NAME = "app.users";
+    static final String CONNECTIONS_METER_NAME = "app.connections";
+
     private final ObjectMapper jacksonObjectMapper;
 
     private final int heartbeatInterval;
@@ -88,8 +91,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     }
 
     private void initMetrics(MeterRegistry meterRegistry) {
-        Gauge.builder("app.users", userConnections::size).register(meterRegistry);
-        Gauge.builder("app.connections", () -> userConnections.values().stream().mapToInt(Integer::intValue).sum()).register(meterRegistry);
+        Gauge.builder(USERS_METER_NAME, userConnections::size).register(meterRegistry);
+        Gauge.builder(CONNECTIONS_METER_NAME, () -> userConnections.values().stream().mapToInt(Integer::intValue).sum()).register(meterRegistry);
     }
 
     Flux<Message<NetworkImpactsInfos>> flux;
