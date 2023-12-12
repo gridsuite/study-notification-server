@@ -6,8 +6,9 @@
  */
 package org.gridsuite.study.notification.server;
 
-import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import lombok.SneakyThrows;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,15 +55,12 @@ public class NotificationWebSocketIT {
 
     @Test
     public void metrics() {
+        testMeters(0);
         WebSocketClient client = new StandardWebSocketClient();
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections())
-                .doFinally(s -> {
-                    testMeter(USERS_METER_NAME, 0);
-                    testMeter(CONNECTIONS_METER_NAME, 0);
-                })
-                .block();
+        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections()).block();
+        testMeters(0);
     }
 
     protected URI getUrl(String path) {
@@ -73,15 +71,20 @@ public class NotificationWebSocketIT {
         @Override
         public Mono<Void> handle(WebSocketSession webSocketSession) {
             return Mono.fromRunnable(() -> {
-                testMeter(USERS_METER_NAME, 1);
-                testMeter(CONNECTIONS_METER_NAME, 1);
+                testMeters(1);
+                webSocketSession.close(); // Force deconnection
             });
         }
     }
 
+    private void testMeters(int val) {
+        testMeter(USERS_METER_NAME, val);
+        testMeter(CONNECTIONS_METER_NAME, val);
+    }
+
     private void testMeter(String name, int val) {
-        Meter meter = meterRegistry.get(name).meter();
+        Gauge meter = meterRegistry.get(name).gauge();
         assertNotNull(meter);
-        assertEquals(val, Double.valueOf(meter.measure().iterator().next().getValue()).intValue());
+        assertEquals(val, Double.valueOf(meter.value()).intValue());
     }
 }
