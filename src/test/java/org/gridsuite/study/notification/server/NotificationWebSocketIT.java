@@ -49,7 +49,7 @@ public class NotificationWebSocketIT {
         WebSocketClient client = new StandardWebSocketClient();
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, WebSocketSession::close).block();
+        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.empty()).block();
     }
 
     @Test
@@ -71,7 +71,7 @@ public class NotificationWebSocketIT {
         public Mono<Void> handle(WebSocketSession webSocketSession) {
             testMeter(USERS_METER_NAME, 1);
             testMeter(CONNECTIONS_METER_NAME, 1);
-            return webSocketSession.close();
+            return Mono.empty();
         }
     }
 
