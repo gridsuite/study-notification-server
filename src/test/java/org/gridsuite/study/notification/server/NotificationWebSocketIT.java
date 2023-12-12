@@ -75,9 +75,9 @@ public class NotificationWebSocketIT {
         }
     }
 
-    private void testMeter(String name, double val) {
+    private void testMeter(String name, int val) {
         Meter meter = meterRegistry.get(name).meter();
         assertNotNull(meter);
-        assertEquals(val, meter.measure().iterator().next().getValue(), 0);
+        assertEquals(val, Double.valueOf(meter.measure().iterator().next().getValue()).intValue());
     }
 }
