@@ -57,9 +57,12 @@ public class NotificationWebSocketIT {
         WebSocketClient client = new StandardWebSocketClient();
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections()).block();
-        testMeter(USERS_METER_NAME, 0);
-        testMeter(CONNECTIONS_METER_NAME, 0);
+        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections())
+                .doFinally(s -> {
+                    testMeter(USERS_METER_NAME, 0);
+                    testMeter(CONNECTIONS_METER_NAME, 0);
+                })
+                .block();
     }
 
     protected URI getUrl(String path) {
@@ -69,9 +72,10 @@ public class NotificationWebSocketIT {
     private class WebSocketHandlerTestConnections implements WebSocketHandler {
         @Override
         public Mono<Void> handle(WebSocketSession webSocketSession) {
-            testMeter(USERS_METER_NAME, 1);
-            testMeter(CONNECTIONS_METER_NAME, 1);
-            return Mono.empty();
+            return Mono.fromRunnable(() -> {
+                testMeter(USERS_METER_NAME, 1);
+                testMeter(CONNECTIONS_METER_NAME, 1);
+            });
         }
     }
 
