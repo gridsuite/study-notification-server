@@ -17,7 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
@@ -25,6 +24,9 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -58,22 +60,11 @@ public class NotificationWebSocketIT {
         WebSocketClient client = new StandardWebSocketClient();
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, new WebSocketHandlerTestConnections()).block();
-        testMeters(0);
+        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.fromRunnable(() -> testMeters(1))).block();
     }
 
     protected URI getUrl(String path) {
         return URI.create("ws://localhost:" + this.port + path);
-    }
-
-    private class WebSocketHandlerTestConnections implements WebSocketHandler {
-        @Override
-        public Mono<Void> handle(WebSocketSession webSocketSession) {
-            return Mono.fromRunnable(() -> {
-                testMeters(1);
-                webSocketSession.close(); // Force deconnection
-            });
-        }
     }
 
     private void testMeters(int val) {

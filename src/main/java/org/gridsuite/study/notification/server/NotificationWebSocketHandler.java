@@ -236,13 +236,11 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
         userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
-        LOGGER.info("CONNECTIONS : {}", userConnections);
     }
 
     private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
         userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
-        LOGGER.info("CONNECTIONS : {}", userConnections);
     }
 }
