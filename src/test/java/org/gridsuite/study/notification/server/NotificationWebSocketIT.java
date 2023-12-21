@@ -6,18 +6,26 @@
  */
 package org.gridsuite.study.notification.server;
 
-import java.net.URI;
-
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
+
+import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
@@ -31,13 +39,38 @@ public class NotificationWebSocketIT {
     @LocalServerPort
     private String port;
 
+    @Autowired
+    private MeterRegistry meterRegistry;
+
     @Test
     public void echo() {
         WebSocketClient client = new StandardWebSocketClient();
-        client.execute(getUrl("/notify"), WebSocketSession::close).block();
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(HEADER_USER_ID, "test");
+        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.empty()).block();
+    }
+
+    @Test
+    public void metrics() {
+        testMeters(0);
+        WebSocketClient client = new StandardWebSocketClient();
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(HEADER_USER_ID, "test");
+        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.fromRunnable(() -> testMeters(1))).block();
     }
 
     protected URI getUrl(String path) {
         return URI.create("ws://localhost:" + this.port + path);
+    }
+
+    private void testMeters(int val) {
+        testMeter(USERS_METER_NAME, val);
+        testMeter(CONNECTIONS_METER_NAME, val);
+    }
+
+    private void testMeter(String name, int val) {
+        Gauge meter = meterRegistry.get(name).gauge();
+        assertNotNull(meter);
+        assertEquals(val, Double.valueOf(meter.value()).intValue());
     }
 }
