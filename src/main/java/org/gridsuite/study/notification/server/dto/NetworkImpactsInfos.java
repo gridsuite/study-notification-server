@@ -17,4 +17,5 @@ import lombok.Getter;
 public class NetworkImpactsInfos {
     private Set<String> impactedSubstationsIds;
     private Set<EquipmentDeletionInfos> deletedEquipments;
+    private Set<String> collectionElementImpacts;
 }
