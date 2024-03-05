@@ -174,7 +174,7 @@ public class NotificationWebSocketHandlerTest {
                     HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true),
 
                 Map.of(HEADER_STUDY_UUID, "", HEADER_UPDATE_TYPE, "indexation_status_updated", HEADER_INDEXATION_STATUS, "INDEXED"))
-                .map(map -> new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), map))
+                .map(map -> new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), map))
                 .collect(Collectors.toList());
 
         @SuppressWarnings("unchecked")
@@ -400,7 +400,7 @@ public class NotificationWebSocketHandlerTest {
         var sink = atomicRef.get();
         Map<String, Object> headers = Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof");
 
-        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), headers)); // should be discarded, no client connected
+        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), headers)); // should be discarded, no client connected
 
         notificationWebSocketHandler.handle(ws);
 
@@ -411,7 +411,7 @@ public class NotificationWebSocketHandlerTest {
         Disposable d1 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
         d1.dispose();
 
-        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos())), headers)); // should be discarded, first client disconnected
+        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), headers)); // should be discarded, first client disconnected
 
         notificationWebSocketHandler.handle(ws);
 
