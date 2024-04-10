@@ -74,7 +74,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_INSERT_MODE = "insertMode";
     static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
-    static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL = "REACTIVE_SLACKS_OVER_THRESHOLD";
+    static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
 
     static final String USERS_METER_NAME = "app.users";
@@ -151,7 +151,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
         passHeader(messageHeader, resHeader, HEADER_REFERENCE_NODE_UUID);
         passHeader(messageHeader, resHeader, HEADER_INDEXATION_STATUS);
-        passHeader(messageHeader, resHeader, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL);
+        passHeader(messageHeader, resHeader, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD);
         passHeader(messageHeader, resHeader, HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE);
 
         return resHeader;
