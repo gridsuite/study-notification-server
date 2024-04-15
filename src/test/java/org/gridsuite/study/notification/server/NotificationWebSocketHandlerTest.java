@@ -222,8 +222,6 @@ public class NotificationWebSocketHandlerTest {
         passHeaderRef(messageHeader, resHeader, HEADER_PARENT_NODE);
         passHeaderRef(messageHeader, resHeader, HEADER_INSERT_MODE);
         passHeaderRef(messageHeader, resHeader, HEADER_INDEXATION_STATUS);
-        passHeaderRef(messageHeader, resHeader, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD);
-        passHeaderRef(messageHeader, resHeader, HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE);
 
         resHeader.remove(HEADER_TIMESTAMP);
 
