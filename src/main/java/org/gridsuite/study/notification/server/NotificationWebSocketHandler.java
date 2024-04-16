@@ -13,7 +13,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.gridsuite.study.notification.server.dto.Filters;
 import org.gridsuite.study.notification.server.dto.FiltersToAdd;
 import org.gridsuite.study.notification.server.dto.FiltersToRemove;
-import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -95,12 +94,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         Gauge.builder(CONNECTIONS_METER_NAME, () -> userConnections.values().stream().mapToInt(Integer::intValue).sum()).register(meterRegistry);
     }
 
-    Flux<Message<NetworkImpactsInfos>> flux;
+    Flux<Message<String>> flux;
 
     @Bean
-    public Consumer<Flux<Message<NetworkImpactsInfos>>> consumeNotification() {
+    public Consumer<Flux<Message<String>>> consumeNotification() {
         return f -> {
-            ConnectableFlux<Message<NetworkImpactsInfos>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
+            ConnectableFlux<Message<String>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.

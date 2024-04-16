@@ -17,7 +17,6 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.collect.ImmutableSet;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -133,7 +132,7 @@ public class NotificationWebSocketHandlerTest {
         }
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
-        var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
+        var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
@@ -148,7 +147,7 @@ public class NotificationWebSocketHandlerTest {
             }
         }
 
-        List<GenericMessage<NetworkImpactsInfos>> refMessages = Stream.<Map<String, Object>>of(
+        List<GenericMessage<String>> refMessages = Stream.<Map<String, Object>>of(
                 Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof"),
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "oof"),
                 Map.of(HEADER_STUDY_UUID, "baz", HEADER_UPDATE_TYPE, "oof"),
@@ -174,7 +173,7 @@ public class NotificationWebSocketHandlerTest {
                     HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_REMOVE_CHILDREN, true),
 
                 Map.of(HEADER_STUDY_UUID, "", HEADER_UPDATE_TYPE, "indexation_status_updated", HEADER_INDEXATION_STATUS, "INDEXED"))
-                .map(map -> new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), map))
+                .map(map -> new GenericMessage<>("", map))
                 .collect(Collectors.toList());
 
         @SuppressWarnings("unchecked")
@@ -300,7 +299,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.getAttributes()).thenReturn(map);
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, 60);
-        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
 
@@ -327,7 +326,7 @@ public class NotificationWebSocketHandlerTest {
         assertEquals("updateType", ws2.getAttributes().get(FILTER_UPDATE_TYPE));
         assertEquals("studyUuid", ws2.getAttributes().get(FILTER_STUDY_UUID));
         var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, Integer.MAX_VALUE);
-        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
 
@@ -348,7 +347,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.getAttributes()).thenReturn(map);
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, Integer.MAX_VALUE);
-        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
 
@@ -366,7 +365,7 @@ public class NotificationWebSocketHandlerTest {
         when(ws2.getAttributes()).thenReturn(map);
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(new ObjectMapper(), meterRegistry, 60);
-        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.receive(ws2).subscribe();
 
@@ -379,7 +378,7 @@ public class NotificationWebSocketHandlerTest {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(null, meterRegistry, 1);
-        var flux = Flux.<Message<NetworkImpactsInfos>>empty();
+        var flux = Flux.<Message<String>>empty();
         notificationWebSocketHandler.consumeNotification().accept(flux);
         notificationWebSocketHandler.handle(ws);
 
@@ -394,13 +393,13 @@ public class NotificationWebSocketHandlerTest {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
-        var atomicRef = new AtomicReference<FluxSink<Message<NetworkImpactsInfos>>>();
+        var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
         var flux = Flux.create(atomicRef::set);
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
         Map<String, Object> headers = Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof");
 
-        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), headers)); // should be discarded, no client connected
+        sink.next(new GenericMessage<>("", headers)); // should be discarded, no client connected
 
         notificationWebSocketHandler.handle(ws);
 
@@ -411,7 +410,7 @@ public class NotificationWebSocketHandlerTest {
         Disposable d1 = out1.map(WebSocketMessage::getPayloadAsText).subscribe(messages1::add);
         d1.dispose();
 
-        sink.next(new GenericMessage<>(new NetworkImpactsInfos(ImmutableSet.of(), ImmutableSet.of(new EquipmentDeletionInfos()), ImmutableSet.of()), headers)); // should be discarded, first client disconnected
+        sink.next(new GenericMessage<>("", headers)); // should be discarded, first client disconnected
 
         notificationWebSocketHandler.handle(ws);
 
