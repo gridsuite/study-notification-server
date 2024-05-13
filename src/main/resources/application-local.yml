@@ -4,9 +4,3 @@ server:
 spring:
   rabbitmq:
     addresses: localhost
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: prometheus, health, info
