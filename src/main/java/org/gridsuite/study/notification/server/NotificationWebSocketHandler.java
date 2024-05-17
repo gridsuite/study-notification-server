@@ -8,8 +8,9 @@ package org.gridsuite.study.notification.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.MultiGauge;
+import io.micrometer.core.instrument.Tags;
 import org.gridsuite.study.notification.server.dto.Filters;
 import org.gridsuite.study.notification.server.dto.FiltersToAdd;
 import org.gridsuite.study.notification.server.dto.FiltersToRemove;
@@ -37,6 +38,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
@@ -75,7 +78,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
 
     static final String USERS_METER_NAME = "app.users";
-    static final String CONNECTIONS_METER_NAME = "app.connections";
+    static final String USER_TAG = "user";
 
     private final ObjectMapper jacksonObjectMapper;
 
@@ -83,15 +86,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
+    private final MultiGauge multiGauge;
+
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.heartbeatInterval = heartbeatInterval;
-        initMetrics(meterRegistry);
-    }
-
-    private void initMetrics(MeterRegistry meterRegistry) {
-        Gauge.builder(USERS_METER_NAME, userConnections::size).register(meterRegistry);
-        Gauge.builder(CONNECTIONS_METER_NAME, () -> userConnections.values().stream().mapToInt(Integer::intValue).sum()).register(meterRegistry);
+        this.multiGauge = MultiGauge.builder(USERS_METER_NAME).register(meterRegistry);
     }
 
     Flux<Message<String>> flux;
@@ -235,11 +235,19 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
         userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
+        updateConnectionMetricsRegistry();
     }
 
     private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
         userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
+        updateConnectionMetricsRegistry();
+    }
+
+    private void updateConnectionMetricsRegistry() {
+        multiGauge.register(userConnections.entrySet().stream()
+                .map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
+                .collect(toList()), true);
     }
 }
