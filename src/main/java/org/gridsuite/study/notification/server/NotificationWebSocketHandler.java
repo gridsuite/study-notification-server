@@ -76,7 +76,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_INSERT_MODE = "insertMode";
     static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
-
     static final String USERS_METER_NAME = "app.users";
     static final String USER_TAG = "user";
 
@@ -86,12 +85,12 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
 
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
-    private final MultiGauge multiGauge;
+    private final MeterRegistry meterRegistry;
 
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.heartbeatInterval = heartbeatInterval;
-        this.multiGauge = MultiGauge.builder(USERS_METER_NAME).register(meterRegistry);
+        this.meterRegistry = meterRegistry;
     }
 
     Flux<Message<String>> flux;
@@ -246,7 +245,10 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     }
 
     private void updateConnectionMetricsRegistry() {
-        multiGauge.register(userConnections.entrySet().stream()
+        MultiGauge.builder(USERS_METER_NAME)
+                .description("The current number of connections per user")
+                .register(meterRegistry)
+                .register(userConnections.entrySet().stream()
                 .map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
                 .collect(toList()), true);
     }

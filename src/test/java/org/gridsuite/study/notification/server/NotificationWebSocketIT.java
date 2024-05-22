@@ -89,7 +89,7 @@ public class NotificationWebSocketIT {
 
     private void testMeterMap(Map<String, Double> userMap) {
         for (Map.Entry<String, Double> userEntry : userMap.entrySet()) {
-            assertEquals(userEntry.getValue(), meterRegistry.get(USERS_METER_NAME).tag(USER_TAG, userEntry.getKey()).gauge().value(), 1e-6);
+            assertEquals(userEntry.getValue(), meterRegistry.get(USERS_METER_NAME).tag(USER_TAG, userEntry.getKey()).gauge().value(), 0);
         }
     }
 }
