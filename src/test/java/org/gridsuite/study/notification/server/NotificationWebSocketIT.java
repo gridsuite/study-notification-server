@@ -19,6 +19,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.net.URI;
 import java.util.Map;
@@ -65,8 +66,8 @@ public class NotificationWebSocketIT {
         CountDownLatch connectionLatch = new CountDownLatch(2);
         CountDownLatch assertLatch = new CountDownLatch(1);
 
-        Mono<Void> connection1 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch)));
-        Mono<Void> connection2 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch)));
+        Mono<Void> connection1 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch))).subscribeOn(Schedulers.boundedElastic());
+        Mono<Void> connection2 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch))).subscribeOn(Schedulers.boundedElastic());
 
         CompletableFuture<Void> evaluationFuture = evaluateAssert(connectionLatch, exp, assertLatch);
         Mono.zip(connection1, connection2).block();
@@ -84,14 +85,14 @@ public class NotificationWebSocketIT {
         Map<String, Double> exp = Map.of(user1, 2d, user2, 1d);
         CountDownLatch connectionLatch = new CountDownLatch(3);
         CountDownLatch assertLatch = new CountDownLatch(1);
-        Mono<Void> connection1 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch)));
-        Mono<Void> connection2 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch)));
+        Mono<Void> connection1 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch))).subscribeOn(Schedulers.boundedElastic());
+        Mono<Void> connection2 = client1.execute(getUrl("/notify"), httpHeaders1, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch))).subscribeOn(Schedulers.boundedElastic());
 
         // Second WebSocketClient for connections related to 'test1' user
         WebSocketClient client2 = new StandardWebSocketClient();
         HttpHeaders httpHeaders2 = new HttpHeaders();
         httpHeaders2.add(HEADER_USER_ID, user2);
-        Mono<Void> connection3 = client2.execute(getUrl("/notify"), httpHeaders2, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch)));
+        Mono<Void> connection3 = client2.execute(getUrl("/notify"), httpHeaders2, ws -> Mono.fromRunnable(() -> handleLatches(connectionLatch, assertLatch))).subscribeOn(Schedulers.boundedElastic());
 
         CompletableFuture<Void> evaluationFuture = evaluateAssert(connectionLatch, exp, assertLatch);
         Mono.zip(connection1, connection2, connection3).block();
