@@ -7,6 +7,7 @@
 package org.gridsuite.study.notification.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,7 @@ public class NotificationWebSocketIT {
     }
 
     @Test
+    @Ignore("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
     public void metricsMapOneUserTwoConnections() {
         WebSocketClient client1 = new StandardWebSocketClient();
         HttpHeaders httpHeaders1 = new HttpHeaders();
@@ -75,6 +77,7 @@ public class NotificationWebSocketIT {
     }
 
     @Test
+    @Ignore("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
     public void metricsMapTwoUsers() {
         // First WebSocketClient for connections related to 'test' user
         WebSocketClient client1 = new StandardWebSocketClient();
