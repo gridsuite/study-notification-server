@@ -71,6 +71,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_MOVED_NODE = "movedNode";
     static final String HEADER_REMOVE_CHILDREN = "removeChildren";
     static final String HEADER_INSERT_MODE = "insertMode";
+    public static final String HEADER_PARAMS_NAME = "paramsName";
 
     private ObjectMapper jacksonObjectMapper;
 
@@ -133,6 +134,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
+        passHeader(messageHeader, resHeader, HEADER_PARAMS_NAME);
 
         return resHeader;
     }
