@@ -6,22 +6,14 @@
  */
 package org.gridsuite.study.notification.server;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.logging.Level;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.MultiGauge;
+import io.micrometer.core.instrument.Tags;
 import org.gridsuite.study.notification.server.dto.Filters;
 import org.gridsuite.study.notification.server.dto.FiltersToAdd;
 import org.gridsuite.study.notification.server.dto.FiltersToRemove;
-import org.gridsuite.study.notification.server.dto.NetworkImpactsInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +28,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
@@ -63,7 +67,6 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
     static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_DELETED_EQUIPMENTS = "deletedEquipments";
     static final String HEADER_NODE = "node";
     static final String HEADER_NODES = "nodes";
     static final String HEADER_PARENT_NODE = "parentNode";
@@ -71,28 +74,37 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_MOVED_NODE = "movedNode";
     static final String HEADER_REMOVE_CHILDREN = "removeChildren";
     static final String HEADER_INSERT_MODE = "insertMode";
+    static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
+    static final String HEADER_INDEXATION_STATUS = "indexation_status";
+    static final String USERS_METER_NAME = "app.users";
+    static final String USER_TAG = "user";
+
+    private final ObjectMapper jacksonObjectMapper;
     public static final String HEADER_PARAMS_NAME = "paramsName";
 
-    private ObjectMapper jacksonObjectMapper;
+    private final int heartbeatInterval;
 
-    private int heartbeatInterval;
+    private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
-    public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
+    private final MultiGauge multiGauge;
+
+    public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.heartbeatInterval = heartbeatInterval;
+        this.multiGauge = MultiGauge.builder(USERS_METER_NAME).description("The current number of connections per user").register(meterRegistry);
     }
 
-    Flux<Message<NetworkImpactsInfos>> flux;
+    Flux<Message<String>> flux;
 
     @Bean
-    public Consumer<Flux<Message<NetworkImpactsInfos>>> consumeNotification() {
+    public Consumer<Flux<Message<String>>> consumeNotification() {
         return f -> {
-            ConnectableFlux<Message<NetworkImpactsInfos>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
+            ConnectableFlux<Message<String>> c = f.log(CATEGORY_BROKER_INPUT, Level.FINE).publish();
             this.flux = c;
             c.connect();
             // Force connect 1 fake subscriber to consumme messages as they come.
             // Otherwise, reactorcore buffers some messages (not until the connectable flux had
-            // at least one subscriber. Is there a better way ?
+            // at least one subscriber). Is there a better way ?
             c.subscribe();
         };
     }
@@ -134,6 +146,8 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
+        passHeader(messageHeader, resHeader, HEADER_REFERENCE_NODE_UUID);
+        passHeader(messageHeader, resHeader, HEADER_INDEXATION_STATUS);
         passHeader(messageHeader, resHeader, HEADER_PARAMS_NAME);
 
         return resHeader;
@@ -210,10 +224,30 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
             webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filterUpdateType);
         }
 
-        LOGGER.debug("New websocket connection for studyUuid={}, updateType={}", filterStudyUuid, filterUpdateType);
         return webSocketSession
-                .send(notificationFlux(webSocketSession)
-                        .mergeWith(heartbeatFlux(webSocketSession)))
-                .and(receive(webSocketSession));
+                .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
+                .and(receive(webSocketSession))
+                .doFirst(() -> updateConnectionMetrics(webSocketSession))
+                .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
+    }
+
+    private void updateConnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
+                webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
+        userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
+        updateConnectionMetricsRegistry();
+    }
+
+    private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
+        userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
+        updateConnectionMetricsRegistry();
+    }
+
+    private void updateConnectionMetricsRegistry() {
+        multiGauge.register(userConnections.entrySet().stream().map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
+                .collect(toList()), true);
     }
 }
