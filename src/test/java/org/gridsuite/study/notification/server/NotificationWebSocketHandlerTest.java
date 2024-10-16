@@ -6,23 +6,16 @@
  */
 package org.gridsuite.study.notification.server;
 
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.gridsuite.study.notification.server.dto.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.gridsuite.study.notification.server.dto.Filters;
+import org.gridsuite.study.notification.server.dto.FiltersToAdd;
+import org.gridsuite.study.notification.server.dto.FiltersToRemove;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -40,15 +33,23 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
  */
-public class NotificationWebSocketHandlerTest {
+class NotificationWebSocketHandlerTest {
 
     private ObjectMapper objectMapper;
     private WebSocketSession ws;
@@ -57,8 +58,8 @@ public class NotificationWebSocketHandlerTest {
 
     private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
-    @Before
-    public void setup() {
+    @BeforeEach
+    void setup() {
         objectMapper = new ObjectMapper();
         var dataBufferFactory = new DefaultDataBufferFactory();
 
@@ -193,7 +194,7 @@ public class NotificationWebSocketHandlerTest {
                     return (filterStudyUuid == null || filterStudyUuid.equals(studyUuid)) && (filterUpdateType == null || filterUpdateType.equals(updateType));
                 })
                 .map(GenericMessage::getHeaders)
-                .map(this::toResultHeader)
+                .map(NotificationWebSocketHandlerTest::toResultHeader)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> actual = messages.stream().map(t -> {
@@ -207,7 +208,7 @@ public class NotificationWebSocketHandlerTest {
         assertNotEquals(0, actual.size());
     }
 
-    private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
+    private static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
         resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
@@ -228,64 +229,64 @@ public class NotificationWebSocketHandlerTest {
         return resHeader;
     }
 
-    private void passHeaderRef(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+    private static void passHeaderRef(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
         if (messageHeader.get(headerName) != null) {
             resHeader.put(headerName, messageHeader.get(headerName));
         }
     }
 
     @Test
-    public void testWithoutFilterInBody() {
+    void testWithoutFilterInBody() {
         withFilters(null, null, false);
     }
 
     @Test
-    public void testWithoutFilterInUrl() {
+    void testWithoutFilterInUrl() {
         withFilters(null, null, true);
     }
 
     @Test
-    public void testStudyFilterInBody() {
+    void testStudyFilterInBody() {
         withFilters("bar", null, false);
     }
 
     @Test
-    public void testStudyFilterInUrl() {
+    void testStudyFilterInUrl() {
         withFilters("bar", null, true);
     }
 
     @Test
-    public void testTypeFilterInBody() {
+    void testTypeFilterInBody() {
         withFilters(null, "rab", false);
     }
 
     @Test
-    public void testTypeFilterInUrl() {
+    void testTypeFilterInUrl() {
         withFilters(null, "rab", true);
     }
 
     @Test
-    public void testStudyAndTypeFilterInBody() {
+    void testStudyAndTypeFilterInBody() {
         withFilters("bar", "rab", false);
     }
 
     @Test
-    public void testStudyAndTypeFilterInUrl() {
+    void testStudyAndTypeFilterInUrl() {
         withFilters("bar", "rab", true);
     }
 
     @Test
-    public void testEncodingCharactersInBody() {
+    void testEncodingCharactersInBody() {
         withFilters("foo bar/bar", "foobar", false);
     }
 
     @Test
-    public void testEncodingCharactersInUrl() {
+    void testEncodingCharactersInUrl() {
         withFilters("foo bar/bar", "foobar", true);
     }
 
     @Test
-    public void testWsReceiveFilters() throws JsonProcessingException {
+    void testWsReceiveFilters() throws Exception {
         setUpUriComponentBuilder("userId");
         var dataBufferFactory = new DefaultDataBufferFactory();
 
@@ -308,7 +309,7 @@ public class NotificationWebSocketHandlerTest {
     }
 
     @Test
-    public void testWsRemoveFilters() throws JsonProcessingException {
+    void testWsRemoveFilters() throws Exception {
         setUpUriComponentBuilder("userId");
         var dataBufferFactory = new DefaultDataBufferFactory();
 
@@ -335,7 +336,7 @@ public class NotificationWebSocketHandlerTest {
     }
 
     @Test
-    public void testWsReceiveEmptyFilters() throws JsonProcessingException {
+    void testWsReceiveEmptyFilters() throws Exception {
         setUpUriComponentBuilder("userId");
         var dataBufferFactory = new DefaultDataBufferFactory();
 
@@ -356,7 +357,7 @@ public class NotificationWebSocketHandlerTest {
     }
 
     @Test
-    public void testWsReceiveUnprocessableFilter() {
+    void testWsReceiveUnprocessableFilter() {
         setUpUriComponentBuilder("userId");
         var dataBufferFactory = new DefaultDataBufferFactory();
 
@@ -374,7 +375,7 @@ public class NotificationWebSocketHandlerTest {
     }
 
     @Test
-    public void testHeartbeat() {
+    void testHeartbeat() {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(null, meterRegistry, 1);
@@ -389,7 +390,7 @@ public class NotificationWebSocketHandlerTest {
     }
 
     @Test
-    public void testDiscard() {
+    void testDiscard() {
         setUpUriComponentBuilder("userId");
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);

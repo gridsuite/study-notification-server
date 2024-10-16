@@ -7,16 +7,13 @@
 package org.gridsuite.study.notification.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Mono;
@@ -28,16 +25,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ContextConfiguration(classes = { NotificationApplication.class })
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {NotificationApplication.class})
 @DirtiesContext
-public class NotificationWebSocketIT {
+class NotificationWebSocketIT {
 
     @LocalServerPort
     private String port;
@@ -46,7 +41,7 @@ public class NotificationWebSocketIT {
     private MeterRegistry meterRegistry;
 
     @Test
-    public void echo() {
+    void echo() {
         WebSocketClient client = new StandardWebSocketClient();
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(HEADER_USER_ID, "test");
@@ -58,8 +53,8 @@ public class NotificationWebSocketIT {
     }
 
     @Test
-    @Ignore("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
-    public void metricsMapOneUserTwoConnections() {
+    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    void metricsMapOneUserTwoConnections() {
         WebSocketClient client1 = new StandardWebSocketClient();
         HttpHeaders httpHeaders1 = new HttpHeaders();
         String user = "test";
@@ -77,8 +72,8 @@ public class NotificationWebSocketIT {
     }
 
     @Test
-    @Ignore("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
-    public void metricsMapTwoUsers() {
+    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    void metricsMapTwoUsers() {
         // First WebSocketClient for connections related to 'test' user
         WebSocketClient client1 = new StandardWebSocketClient();
         HttpHeaders httpHeaders1 = new HttpHeaders();
@@ -102,7 +97,7 @@ public class NotificationWebSocketIT {
         evaluationFuture.join(); // Throw assertion errors
     }
 
-    private void handleLatches(CountDownLatch connectionLatch, CountDownLatch assertLatch) {
+    private static void handleLatches(CountDownLatch connectionLatch, CountDownLatch assertLatch) {
         try {
             connectionLatch.countDown();
             assertLatch.await(); // Wait for assertion to be evaluated before closing the connection
