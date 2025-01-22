@@ -70,6 +70,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_NODE = "node";
     static final String HEADER_ROOT_NETWORK = "rootNetwork";
     static final String HEADER_NODES = "nodes";
+    static final String HEADER_ROOT_NETWORKS = "rootNetworks";
     static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NEW_NODE = "newNode";
     static final String HEADER_MOVED_NODE = "movedNode";
@@ -146,6 +147,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_NODE);
         passHeader(messageHeader, resHeader, HEADER_ROOT_NETWORK);
         passHeader(messageHeader, resHeader, HEADER_NODES);
+        passHeader(messageHeader, resHeader, HEADER_ROOT_NETWORKS);
         passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
         passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
