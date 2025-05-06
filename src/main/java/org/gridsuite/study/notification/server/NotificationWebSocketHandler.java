@@ -79,8 +79,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     static final String HEADER_INDEXATION_STATUS = "indexation_status";
     static final String HEADER_COMPUTATION_TYPE = "computationType";
-    static final String HEADER_DEBUG = "debug";
-    static final String HEADER_BROWSER_TAB_UUID = "browserTabUuid";
+    static final String HEADER_RESULT_UUID = "resultUuid";
 
     static final String USERS_METER_NAME = "app.users";
     static final String USER_TAG = "user";
@@ -156,8 +155,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         passHeader(messageHeader, resHeader, HEADER_REFERENCE_NODE_UUID);
         passHeader(messageHeader, resHeader, HEADER_INDEXATION_STATUS);
         passHeader(messageHeader, resHeader, HEADER_COMPUTATION_TYPE);
-        passHeader(messageHeader, resHeader, HEADER_DEBUG);
-        passHeader(messageHeader, resHeader, HEADER_BROWSER_TAB_UUID);
+        passHeader(messageHeader, resHeader, HEADER_RESULT_UUID);
 
         return resHeader;
     }
