@@ -81,7 +81,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
     static final String HEADER_COMPUTATION_TYPE = "computationType";
     static final String HEADER_RESULT_UUID = "resultUuid";
     static final String HEADER_EXPORT_UUID = "exportUuid";
-    static final String HEADER_EXPORT_TO_EXPLORER = "exportToExplorer";
+    static final String HEADER_EXPORT_TO_EXPLORER = "exportToGridExplore";
 
     static final String USERS_METER_NAME = "app.users";
     static final String USER_TAG = "user";
