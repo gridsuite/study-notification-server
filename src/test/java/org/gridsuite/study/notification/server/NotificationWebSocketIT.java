@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,7 +7,7 @@
 package org.gridsuite.study.notification.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,10 +20,12 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
+import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -52,8 +54,7 @@ class NotificationWebSocketIT {
         return URI.create("ws://localhost:" + this.port + path);
     }
 
-    @Test
-    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    @RepeatedTest(10)
     void metricsMapOneUserTwoConnections() {
         WebSocketClient client1 = new StandardWebSocketClient();
         HttpHeaders httpHeaders1 = new HttpHeaders();
@@ -71,8 +72,7 @@ class NotificationWebSocketIT {
         evaluationFuture.join(); // Throw assertion errors
     }
 
-    @Test
-    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    @RepeatedTest(10)
     void metricsMapTwoUsers() {
         // First WebSocketClient for connections related to 'test' user
         WebSocketClient client1 = new StandardWebSocketClient();
@@ -110,7 +110,9 @@ class NotificationWebSocketIT {
         return CompletableFuture.runAsync(() -> {
             try {
                 connectionLatch.await();  // Wait for connections to be established
-                testMeterMap(exp);
+                waitAtMost(Duration.ofSeconds(5)).untilAsserted(
+                        () -> testMeterMap(exp)
+                );
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } finally {
