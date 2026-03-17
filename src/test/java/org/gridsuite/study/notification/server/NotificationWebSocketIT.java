@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
@@ -101,7 +102,12 @@ class NotificationWebSocketIT {
         try {
             connectionLatch.countDown();
             assertLatch.await(); // Wait for assertion to be evaluated before closing the connection
+            boolean assertionFinished = assertLatch.await(5, TimeUnit.SECONDS);  // Wait for connections to be established
+            if (!assertionFinished) {
+                throw new AssertionError("Assertion not done within 5 seconds");
+            }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
     }
@@ -109,11 +115,15 @@ class NotificationWebSocketIT {
     private CompletableFuture<Void> evaluateAssert(CountDownLatch connectionLatch, Map<String, Double> exp, CountDownLatch assertLatch) {
         return CompletableFuture.runAsync(() -> {
             try {
-                connectionLatch.await();  // Wait for connections to be established
+                boolean connectionsEstablished = connectionLatch.await(5, TimeUnit.SECONDS);  // Wait for connections to be established
+                if (!connectionsEstablished) {
+                    throw new AssertionError("WebSocket connections were not established within 5 seconds");
+                }
                 waitAtMost(Duration.ofSeconds(5)).untilAsserted(
                         () -> testMeterMap(exp)
                 );
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             } finally {
                 assertLatch.countDown(); // Close connections if there is an assertion error
