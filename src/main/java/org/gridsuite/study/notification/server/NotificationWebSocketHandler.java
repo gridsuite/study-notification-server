@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -252,7 +252,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
                 .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
     }
 
-    private void updateConnectionMetrics(WebSocketSession webSocketSession) {
+    private synchronized void updateConnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         LOGGER.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
                 webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
@@ -260,7 +260,7 @@ public class NotificationWebSocketHandler implements WebSocketHandler {
         updateConnectionMetricsRegistry();
     }
 
-    private void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
+    private synchronized void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         LOGGER.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
         userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
