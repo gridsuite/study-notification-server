@@ -20,15 +20,18 @@ import java.util.Map;
  * @author Jon Harper <jon.harper at rte-france.com>
  */
 @Configuration
-public class NotificationWebSocketConfiguration {
+public class WebSocketConfiguration {
 
     @Autowired
-    private WebSocketHandler webSocketHandler;
+    private NotificationWebSocketHandler notificationWebSocketHandler;
+    @Autowired
+    private QuotaWebSocketHandler quotaWebSocketHandler;
 
     @Bean
     public HandlerMapping webSocketHandlerMapping() {
         Map<String, WebSocketHandler> map = new HashMap<>();
-        map.put("/notify", webSocketHandler);
+        map.put("/notify", notificationWebSocketHandler);
+        map.put("/quota", quotaWebSocketHandler);
 
         SimpleUrlHandlerMapping handlerMapping = new SimpleUrlHandlerMapping();
         handlerMapping.setOrder(1);
