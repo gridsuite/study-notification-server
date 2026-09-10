@@ -22,6 +22,7 @@ import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -41,38 +42,9 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private final String categoryBrokerInput = getClass().getName() + ".messages.input-broker";
     private final String categoryWsOutput = getClass().getName() + ".messages.output-websocket";
 
-    static final String QUERY_STUDY_UUID = "studyUuid";
-    static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
-    static final String QUERY_UPDATE_TYPE = "updateType";
-    static final String FILTER_UPDATE_TYPE = QUERY_UPDATE_TYPE;
-    static final String QUERY_USER_ID = "userId";
     static final String HEADER_USER_ID = "userId";
-    static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_UPDATE_TYPE = "updateType";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
-    static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_NODE = "node";
-    static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
-    static final String HEADER_NODES = "nodes";
-    static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
-    static final String HEADER_PARENT_NODE = "parentNode";
-    static final String HEADER_NEW_NODE = "newNode";
-    static final String HEADER_MOVED_NODE = "movedNode";
-    static final String HEADER_REMOVE_CHILDREN = "removeChildren";
-    static final String HEADER_INSERT_MODE = "insertMode";
-    static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
-    static final String HEADER_INDEXATION_STATUS = "indexation_status";
-    static final String HEADER_COMPUTATION_TYPE = "computationType";
-    static final String HEADER_COMPUTATION_SUBTYPE = "computationSubtype";
-    static final String HEADER_RESULT_UUID = "resultUuid";
-    static final String HEADER_EXPORT_UUID = "exportUuid";
-    static final String HEADER_EXPORT_TO_EXPLORER = "exportToGridExplore";
-    static final String HEADER_FILE_NAME = "fileName";
-    static final String HEADER_WORKSPACE_UUID = "workspaceUuid";
-    static final String HEADER_PANEL_ID = "panelId";
-    static final String HEADER_CLIENT_ID = "clientId";
-    static final String HEADER_QUOTA_TYPE = "quotaType";
 
     static final String USERS_METER_NAME = "app.users";
     static final String USER_TAG = "user";
@@ -127,36 +99,22 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
      */
     protected abstract boolean filterMessage(WebSocketSession webSocketSession, Message<String> message);
 
-    private static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
+    /**
+     * Additional message headers, specific to the concrete handler, that should be passed through
+     * to the websocket client on top of the common ones handled by {@link #toResultHeader}.
+     */
+    protected abstract List<String> getAdditionalPassthroughHeaders();
+
+    private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
-        resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
-        passHeader(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeader(messageHeader, resHeader, HEADER_ERROR);
-        passHeader(messageHeader, resHeader, HEADER_SUBSTATIONS_IDS);
-        passHeader(messageHeader, resHeader, HEADER_PARENT_NODE);
-        passHeader(messageHeader, resHeader, HEADER_INSERT_MODE);
-        passHeader(messageHeader, resHeader, HEADER_REMOVE_CHILDREN);
-        passHeader(messageHeader, resHeader, HEADER_NODE);
-        passHeader(messageHeader, resHeader, HEADER_ROOT_NETWORK_UUID);
-        passHeader(messageHeader, resHeader, HEADER_NODES);
-        passHeader(messageHeader, resHeader, HEADER_ROOT_NETWORKS_UUIDS);
-        passHeader(messageHeader, resHeader, HEADER_NEW_NODE);
-        passHeader(messageHeader, resHeader, HEADER_MOVED_NODE);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
-        passHeader(messageHeader, resHeader, HEADER_REFERENCE_NODE_UUID);
-        passHeader(messageHeader, resHeader, HEADER_INDEXATION_STATUS);
-        passHeader(messageHeader, resHeader, HEADER_COMPUTATION_TYPE);
-        passHeader(messageHeader, resHeader, HEADER_COMPUTATION_SUBTYPE);
-        passHeader(messageHeader, resHeader, HEADER_RESULT_UUID);
-        passHeader(messageHeader, resHeader, HEADER_EXPORT_UUID);
-        passHeader(messageHeader, resHeader, HEADER_EXPORT_TO_EXPLORER);
-        passHeader(messageHeader, resHeader, HEADER_FILE_NAME);
-        passHeader(messageHeader, resHeader, HEADER_WORKSPACE_UUID);
-        passHeader(messageHeader, resHeader, HEADER_PANEL_ID);
-        passHeader(messageHeader, resHeader, HEADER_CLIENT_ID);
-        passHeader(messageHeader, resHeader, HEADER_QUOTA_TYPE);
+
+        for (String headerName : getAdditionalPassthroughHeaders()) {
+            passHeader(messageHeader, resHeader, headerName);
+        }
 
         return resHeader;
     }
@@ -177,11 +135,12 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
 
     protected synchronized void updateConnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
-        logger.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
-                webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
+        logConnection(webSocketSession, userId);
         userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
         updateConnectionMetricsRegistry();
     }
+
+    protected abstract void logConnection(WebSocketSession webSocketSession, String userId);
 
     protected synchronized void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
         var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);

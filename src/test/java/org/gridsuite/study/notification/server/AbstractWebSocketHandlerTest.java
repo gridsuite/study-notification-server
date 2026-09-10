@@ -134,7 +134,7 @@ abstract class AbstractWebSocketHandlerTest<T extends AbstractWebSocketHandler> 
         var flux = Flux.<Message<String>>create(atomicRef::set);
         consumeBrokerFlux(handler, flux);
         var sink = atomicRef.get();
-        Map<String, Object> headers = Map.of(AbstractWebSocketHandler.HEADER_STUDY_UUID, "foo", AbstractWebSocketHandler.HEADER_UPDATE_TYPE, "oof");
+        Map<String, Object> headers = Map.of("studyUuid", "foo", "updateType", "oof");
 
         sink.next(new GenericMessage<>("", headers)); // should be discarded, no client connected
 

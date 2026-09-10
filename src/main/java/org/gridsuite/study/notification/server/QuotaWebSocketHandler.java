@@ -18,6 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -33,6 +34,11 @@ import java.util.function.Consumer;
 @Component
 public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
 
+    static final String QUERY_USER_ID = "userId";
+    static final String HEADER_QUOTA_TYPE = "quotaType";
+
+    private static final List<String> ADDITIONAL_PASSTHROUGH_HEADERS = List.of(HEADER_QUOTA_TYPE);
+
     public QuotaWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry,
                                  @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         super(jacksonObjectMapper, meterRegistry, heartbeatInterval);
@@ -41,6 +47,11 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
     @Bean
     public Consumer<Flux<Message<String>>> consumeNotificationQuota() {
         return this::consumeBrokerFlux;
+    }
+
+    @Override
+    protected List<String> getAdditionalPassthroughHeaders() {
+        return ADDITIONAL_PASSTHROUGH_HEADERS;
     }
 
     @Override
@@ -62,5 +73,10 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
                 .doFirst(() -> updateConnectionMetrics(webSocketSession))
                 .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
+    }
+
+    @Override
+    protected void logConnection(WebSocketSession webSocketSession, String userId) {
+        logger.info("New websocket connection id={} for user={}", webSocketSession.getId(), userId);
     }
 }

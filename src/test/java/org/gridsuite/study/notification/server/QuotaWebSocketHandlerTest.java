@@ -76,12 +76,12 @@ class QuotaWebSocketHandlerTest extends AbstractWebSocketHandlerTest<QuotaWebSoc
         quotaWebSocketHandler.handle(ws);
 
         List<GenericMessage<String>> refMessages = Stream.<Map<String, Object>>of(
-                Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof"),
-                Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab"),
+                Map.of("studyUuid", "foo", "updateType", "oof"),
+                Map.of("studyUuid", "bar", "updateType", "rab"),
 
-                Map.of(HEADER_STUDY_UUID, "public_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId),
-                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId),
-                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_ERROR, "error_message"))
+                Map.of("studyUuid", "public_" + connectedUserId, "updateType", "oof", HEADER_USER_ID, connectedUserId),
+                Map.of("studyUuid", "public_" + otherUserId, "updateType", "rab", HEADER_USER_ID, otherUserId),
+                Map.of("studyUuid", "public_" + otherUserId, "updateType", "rab", HEADER_USER_ID, otherUserId, HEADER_ERROR, "error_message"))
                 .map(map -> new GenericMessage<>("", map))
                 .collect(Collectors.toList());
 
@@ -116,9 +116,7 @@ class QuotaWebSocketHandlerTest extends AbstractWebSocketHandlerTest<QuotaWebSoc
     private static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
-        resHeader.put(HEADER_UPDATE_TYPE, messageHeader.get(HEADER_UPDATE_TYPE));
 
-        passHeaderRef(messageHeader, resHeader, HEADER_STUDY_UUID);
         passHeaderRef(messageHeader, resHeader, HEADER_ERROR);
         passHeaderRef(messageHeader, resHeader, HEADER_USER_ID);
 

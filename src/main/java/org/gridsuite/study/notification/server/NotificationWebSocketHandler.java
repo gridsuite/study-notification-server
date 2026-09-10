@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -41,6 +42,59 @@ import java.util.function.Consumer;
 @Component
 public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
 
+    static final String QUERY_STUDY_UUID = "studyUuid";
+    static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
+    static final String QUERY_UPDATE_TYPE = "updateType";
+    static final String FILTER_UPDATE_TYPE = QUERY_UPDATE_TYPE;
+    static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_UPDATE_TYPE = "updateType";
+    static final String HEADER_SUBSTATIONS_IDS = "substationsIds";
+    static final String HEADER_NODE = "node";
+    static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
+    static final String HEADER_NODES = "nodes";
+    static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
+    static final String HEADER_PARENT_NODE = "parentNode";
+    static final String HEADER_NEW_NODE = "newNode";
+    static final String HEADER_MOVED_NODE = "movedNode";
+    static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    static final String HEADER_INSERT_MODE = "insertMode";
+    static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
+    static final String HEADER_INDEXATION_STATUS = "indexation_status";
+    static final String HEADER_COMPUTATION_TYPE = "computationType";
+    static final String HEADER_COMPUTATION_SUBTYPE = "computationSubtype";
+    static final String HEADER_RESULT_UUID = "resultUuid";
+    static final String HEADER_EXPORT_UUID = "exportUuid";
+    static final String HEADER_EXPORT_TO_EXPLORER = "exportToGridExplore";
+    static final String HEADER_FILE_NAME = "fileName";
+    static final String HEADER_WORKSPACE_UUID = "workspaceUuid";
+    static final String HEADER_PANEL_ID = "panelId";
+    static final String HEADER_CLIENT_ID = "clientId";
+
+    private static final List<String> ADDITIONAL_PASSTHROUGH_HEADERS = List.of(
+            HEADER_UPDATE_TYPE,
+            HEADER_STUDY_UUID,
+            HEADER_SUBSTATIONS_IDS,
+            HEADER_PARENT_NODE,
+            HEADER_INSERT_MODE,
+            HEADER_REMOVE_CHILDREN,
+            HEADER_NODE,
+            HEADER_ROOT_NETWORK_UUID,
+            HEADER_NODES,
+            HEADER_ROOT_NETWORKS_UUIDS,
+            HEADER_NEW_NODE,
+            HEADER_MOVED_NODE,
+            HEADER_REFERENCE_NODE_UUID,
+            HEADER_INDEXATION_STATUS,
+            HEADER_COMPUTATION_TYPE,
+            HEADER_COMPUTATION_SUBTYPE,
+            HEADER_RESULT_UUID,
+            HEADER_EXPORT_UUID,
+            HEADER_EXPORT_TO_EXPLORER,
+            HEADER_FILE_NAME,
+            HEADER_WORKSPACE_UUID,
+            HEADER_PANEL_ID,
+            HEADER_CLIENT_ID);
+
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
         super(jacksonObjectMapper, meterRegistry, heartbeatInterval);
     }
@@ -48,6 +102,11 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     @Bean
     public Consumer<Flux<Message<String>>> consumeNotification() {
         return this::consumeBrokerFlux;
+    }
+
+    @Override
+    protected List<String> getAdditionalPassthroughHeaders() {
+        return ADDITIONAL_PASSTHROUGH_HEADERS;
     }
 
     @Override
@@ -122,5 +181,11 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
                 .and(receive(webSocketSession))
                 .doFirst(() -> updateConnectionMetrics(webSocketSession))
                 .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
+    }
+
+    @Override
+    protected void logConnection(WebSocketSession webSocketSession, String userId) {
+        logger.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
+                    webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
     }
 }
