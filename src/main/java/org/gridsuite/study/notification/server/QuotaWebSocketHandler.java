@@ -7,7 +7,6 @@
 package org.gridsuite.study.notification.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
@@ -39,9 +38,8 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
 
     private static final List<String> ADDITIONAL_PASSTHROUGH_HEADERS = List.of(HEADER_QUOTA_TYPE);
 
-    public QuotaWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry,
-                                 @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
-        super(jacksonObjectMapper, meterRegistry, heartbeatInterval);
+    public QuotaWebSocketHandler(ObjectMapper jacksonObjectMapper, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
+        super(jacksonObjectMapper, heartbeatInterval);
     }
 
     @Bean
@@ -56,7 +54,7 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     protected boolean filterMessage(WebSocketSession webSocketSession, Message<String> message) {
-        String userId = (String) webSocketSession.getAttributes().get(HEADER_USER_ID);
+        String userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         return userId == null || userId.equals(message.getHeaders().get(HEADER_USER_ID));
     }
 
@@ -71,12 +69,17 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
 
         return webSocketSession
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
-                .doFirst(() -> updateConnectionMetrics(webSocketSession))
-                .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
+                .doFirst(() -> logConnection(webSocketSession))
+                .doFinally(s -> logDisconnection(webSocketSession));
     }
 
-    @Override
-    protected void logConnection(WebSocketSession webSocketSession, String userId) {
+    protected void logConnection(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         logger.info("New websocket connection id={} for user={}", webSocketSession.getId(), userId);
+    }
+
+    protected void logDisconnection(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        logger.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
     }
 }

@@ -39,7 +39,7 @@ class QuotaWebSocketHandlerTest extends AbstractWebSocketHandlerTest<QuotaWebSoc
 
     @Override
     protected QuotaWebSocketHandler createHandler(ObjectMapper objectMapper, MeterRegistry meterRegistry, int heartbeatInterval) {
-        return new QuotaWebSocketHandler(objectMapper, meterRegistry, heartbeatInterval);
+        return new QuotaWebSocketHandler(objectMapper, heartbeatInterval);
     }
 
     @Override
@@ -94,10 +94,7 @@ class QuotaWebSocketHandlerTest extends AbstractWebSocketHandlerTest<QuotaWebSoc
         sink.complete();
 
         List<Map<String, Object>> expected = refMessages.stream()
-                .filter(m -> {
-                    String userId = (String) m.getHeaders().get(HEADER_USER_ID);
-                    return filterUserId == null || filterUserId.equals(userId);
-                })
+                .filter(m -> connectedUserId.equals(m.getHeaders().get(HEADER_USER_ID)))
                 .map(GenericMessage::getHeaders)
                 .map(QuotaWebSocketHandlerTest::toResultHeader)
                 .collect(Collectors.toList());
