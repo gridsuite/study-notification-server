@@ -8,9 +8,6 @@ package org.gridsuite.study.notification.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.MultiGauge;
-import io.micrometer.core.instrument.Tags;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
@@ -24,10 +21,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * Base class factoring out the common behaviour shared by the notification websocket handlers:
@@ -53,16 +47,11 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
 
     protected final int heartbeatInterval;
 
-    private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
-
-    private final MultiGauge multiGauge;
-
     protected Flux<Message<String>> flux;
 
-    protected AbstractWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, int heartbeatInterval) {
+    protected AbstractWebSocketHandler(ObjectMapper jacksonObjectMapper, int heartbeatInterval) {
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.heartbeatInterval = heartbeatInterval;
-        this.multiGauge = MultiGauge.builder(USERS_METER_NAME).description("The current number of connections per user").register(meterRegistry);
     }
 
     /**
@@ -131,26 +120,5 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     protected Flux<WebSocketMessage> heartbeatFlux(WebSocketSession webSocketSession) {
         return Flux.interval(Duration.ofSeconds(heartbeatInterval)).map(n -> webSocketSession
                 .pingMessage(dbf -> dbf.wrap((webSocketSession.getId() + "-" + n).getBytes(java.nio.charset.StandardCharsets.UTF_8))));
-    }
-
-    protected synchronized void updateConnectionMetrics(WebSocketSession webSocketSession) {
-        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
-        logConnection(webSocketSession, userId);
-        userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
-        updateConnectionMetricsRegistry();
-    }
-
-    protected abstract void logConnection(WebSocketSession webSocketSession, String userId);
-
-    protected synchronized void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
-        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
-        logger.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
-        userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
-        updateConnectionMetricsRegistry();
-    }
-
-    private void updateConnectionMetricsRegistry() {
-        multiGauge.register(userConnections.entrySet().stream().map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
-                .collect(toList()), true);
     }
 }

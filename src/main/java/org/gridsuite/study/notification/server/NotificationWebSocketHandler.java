@@ -9,6 +9,8 @@ package org.gridsuite.study.notification.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.MultiGauge;
+import io.micrometer.core.instrument.Tags;
 import org.gridsuite.study.notification.server.dto.Filters;
 import org.gridsuite.study.notification.server.dto.FiltersToAdd;
 import org.gridsuite.study.notification.server.dto.FiltersToRemove;
@@ -27,7 +29,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
@@ -95,8 +101,12 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
             HEADER_PANEL_ID,
             HEADER_CLIENT_ID);
 
+    private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
+    private final MultiGauge multiGauge;
+
     public NotificationWebSocketHandler(ObjectMapper jacksonObjectMapper, MeterRegistry meterRegistry, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
-        super(jacksonObjectMapper, meterRegistry, heartbeatInterval);
+        super(jacksonObjectMapper, heartbeatInterval);
+        this.multiGauge = MultiGauge.builder(USERS_METER_NAME).description("The current number of connections per user").register(meterRegistry);
     }
 
     @Bean
@@ -183,9 +193,23 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
                 .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
     }
 
-    @Override
-    protected void logConnection(WebSocketSession webSocketSession, String userId) {
+    protected synchronized void updateConnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
         logger.info("New websocket connection id={} for user={} studyUuid={}, updateType={}", webSocketSession.getId(), userId,
                     webSocketSession.getAttributes().get(FILTER_STUDY_UUID), webSocketSession.getAttributes().get(FILTER_UPDATE_TYPE));
+        userConnections.compute(userId, (k, v) -> (v == null) ? 1 : v + 1);
+        updateConnectionMetricsRegistry();
+    }
+
+    protected synchronized void updateDisconnectionMetrics(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        logger.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
+        userConnections.computeIfPresent(userId, (k, v) -> v > 1 ? v - 1 : null);
+        updateConnectionMetricsRegistry();
+    }
+
+    private void updateConnectionMetricsRegistry() {
+        multiGauge.register(userConnections.entrySet().stream().map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
+                                    .collect(toList()), true);
     }
 }
