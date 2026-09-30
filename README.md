@@ -100,11 +100,7 @@ Each outbound text message is a JSON object with the consumed message payload an
 
 ### `/quota`
 
-Broadcasts user quota update messages, filtered to the connected user. The user is identified either through the `userId` query parameter or the `userId` handshake header:
-
-```text
-/quota?userId=<userId>
-```
+Broadcasts user quota update messages, filtered to the connected user. 
 
 Each outbound text message is a JSON object with the consumed message payload and the `quotaType` header:
 
