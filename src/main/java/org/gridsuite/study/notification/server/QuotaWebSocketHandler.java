@@ -11,9 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.socket.WebSocketSession;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -60,13 +58,6 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
-        var uri = webSocketSession.getHandshakeInfo().getUri();
-        MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
-        String filterUserId = parameters.getFirst(QUERY_USER_ID);
-        if (filterUserId != null) {
-            webSocketSession.getAttributes().put(HEADER_USER_ID, filterUserId);
-        }
-
         return webSocketSession
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
                 .doFirst(() -> logConnection(webSocketSession))
