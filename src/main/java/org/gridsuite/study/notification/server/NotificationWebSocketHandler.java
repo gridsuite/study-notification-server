@@ -13,6 +13,7 @@ import io.micrometer.core.instrument.Tags;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.socket.WebSocketSession;
@@ -123,6 +124,7 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
+    @PreAuthorize("@authorizationService.canReadStudy(authentication, #webSocketSession)")
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
