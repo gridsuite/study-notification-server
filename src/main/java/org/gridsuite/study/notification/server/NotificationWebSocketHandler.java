@@ -17,6 +17,7 @@ import org.gridsuite.study.notification.server.dto.FiltersToRemove;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.socket.WebSocketMessage;
@@ -32,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
@@ -169,6 +168,7 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
+    @PreAuthorize("@authorizationService.canReadStudy(authentication, #webSocketSession)")
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
@@ -210,6 +210,6 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
 
     private void updateConnectionMetricsRegistry() {
         multiGauge.register(userConnections.entrySet().stream().map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
-                                    .collect(toList()), true);
+                                    .toList(), true);
     }
 }
