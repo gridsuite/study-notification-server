@@ -4,3 +4,8 @@ server:
 spring:
   rabbitmq:
     addresses: localhost
+
+gridsuite:
+  services:
+    directory-server:
+      base-uri: http://localhost:5026
