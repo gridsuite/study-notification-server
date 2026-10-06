@@ -29,18 +29,21 @@ public class AuthorizationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationService.class);
 
-    private static final String ELEMENTS_AUTHORIZED_PATH = "/v1/elements/authorized";
     private static final String PARAM_IDS = "ids";
     private static final String PARAM_ACCESS_TYPE = "accessType";
     private static final String QUERY_STUDY_UUID = "studyUuid";
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     private final WebClient webClient;
+    private final String elementsAuthorizedPath;
 
     public AuthorizationService(
             WebClient.Builder webClientBuilder,
-            @Value("${gridsuite.services.directory-server.base-uri:http://directory-server/}") String directoryServerBaseUri) {
+            @Value("${gridsuite.services.directory-server.base-uri:http://directory-server/}") String directoryServerBaseUri,
+            @Value("${gridsuite.services.directory-server.authorized-elements-path:/v1/elements/authorized}")
+            String elementsAuthorizedPath) {
         this.webClient = webClientBuilder.baseUrl(directoryServerBaseUri).build();
+        this.elementsAuthorizedPath = elementsAuthorizedPath;
     }
 
     public Mono<Boolean> canReadStudy(Authentication authentication, WebSocketSession session) {
@@ -55,7 +58,7 @@ public class AuthorizationService {
 
         String userId = authentication.getName();
 
-        String path = UriComponentsBuilder.fromPath(ELEMENTS_AUTHORIZED_PATH)
+        String path = UriComponentsBuilder.fromPath(elementsAuthorizedPath)
                 .queryParam(PARAM_ACCESS_TYPE, "READ")
                 .queryParam(PARAM_IDS, studyUuid)
                 .toUriString();
