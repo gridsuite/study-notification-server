@@ -12,7 +12,7 @@ Study Notification Server is the GridStudy notification service. It consumes stu
 
 - Consume study update messages from the `study.update` RabbitMQ destination and broadcast them on the `/notify` WebSocket endpoint.
 - Consume user quota update messages from the `quota.update` RabbitMQ destination and broadcast them on the `/quota` WebSocket endpoint.
-- Support client-side filtering on `/notify` by `studyUuid` and `updateType`, provided either as query parameters at connection time or dynamically updated afterwards through messages sent by the client on the WebSocket itself.
+- Support client-side filtering on `/notify` by `studyUuid` and `updateType`, provided as query parameters at connection time.
 - Filter `/quota` messages so each client only receives quota updates for its own user (matched against the `userId` header, from the query parameter or the handshake header).
 - Forward the update payload and a set of selected message headers needed by the frontend (e.g. `studyUuid`, `updateType`, `node`, `resultUuid`, `computationType`, etc. for `/notify`; `quotaType` for `/quota`).
 - Send periodic WebSocket ping frames to keep client connections alive.
