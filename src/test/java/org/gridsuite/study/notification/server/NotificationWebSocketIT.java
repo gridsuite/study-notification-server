@@ -57,7 +57,7 @@ class NotificationWebSocketIT {
     }
 
     protected URI getUrl(String path) {
-        return URI.create("ws://localhost:" + this.port + path);
+        return URI.create("ws://localhost:" + this.port + path + "?studyUuid=study123");
     }
 
     @RepeatedTest(10)
