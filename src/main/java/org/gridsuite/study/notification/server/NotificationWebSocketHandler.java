@@ -136,6 +136,8 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
             } catch (UnsupportedEncodingException e) {
                 throw new NotificationServerRuntimeException(e.getMessage());
             }
+        } else {
+            return Mono.empty();
         }
         String filterUpdateType = parameters.getFirst(QUERY_UPDATE_TYPE);
         if (filterUpdateType != null) {

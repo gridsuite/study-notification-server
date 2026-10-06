@@ -44,7 +44,7 @@ The service exposes two WebSocket endpoints:
 
 ### `/notify`
 
-Broadcasts study update messages. Supports optional filtering by `studyUuid` and `updateType` query parameters:
+Broadcasts study update messages. `studyUuid` query parameter is mandatory. Supports optional filtering by `updateType` query parameter:
 
 ```text
 /notify?studyUuid=<uuid>&updateType=<type>

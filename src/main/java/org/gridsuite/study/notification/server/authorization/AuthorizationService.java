@@ -66,10 +66,15 @@ public class AuthorizationService {
         return webClient.get()
                 .uri(path)
                 .header(HEADER_USER_ID, userId)
-                .retrieve()
-                .toBodilessEntity()
-                .map(response -> response.getStatusCode().is2xxSuccessful())
-                .timeout(TIMEOUT)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().is2xxSuccessful()) {
+                        return Mono.just(true);
+                    }
+                    if (response.statusCode().value() == 403) {
+                        return Mono.just(false);
+                    }
+                    return response.createException().flatMap(Mono::error);
+                }).timeout(TIMEOUT)
                 .doOnNext(granted -> LOGGER.debug("Read access for user {} on study {}: {}", userId, studyUuid, granted))
                 .onErrorResume(e -> {
                     LOGGER.warn("Authorization check failed for user {} on study {}. Access denied.", userId, studyUuid, e);
