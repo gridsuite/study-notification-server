@@ -12,7 +12,7 @@ Study Notification Server is the GridStudy notification service. It consumes stu
 
 - Consume study update messages from the `study.update` RabbitMQ destination and broadcast them on the `/notify` WebSocket endpoint.
 - Consume user quota update messages from the `quota.update` RabbitMQ destination and broadcast them on the `/quota` WebSocket endpoint.
-- Support client-side filtering on `/notify` by `studyUuid` and/or `updateType`, provided either as query parameters at connection time or dynamically updated afterwards through messages sent by the client on the WebSocket itself.
+- Support client-side filtering on `/notify` by `studyUuid` and `updateType`, provided as query parameters at connection time.
 - Filter `/quota` messages so each client only receives quota updates for its own user (matched against the `userId` header, from the query parameter or the handshake header).
 - Forward the update payload and a set of selected message headers needed by the frontend (e.g. `studyUuid`, `updateType`, `node`, `resultUuid`, `computationType`, etc. for `/notify`; `quotaType` for `/quota`).
 - Send periodic WebSocket ping frames to keep client connections alive.
@@ -44,25 +44,10 @@ The service exposes two WebSocket endpoints:
 
 ### `/notify`
 
-Broadcasts study update messages. Supports optional filtering by `studyUuid` and/or `updateType` query parameters:
+Broadcasts study update messages. Supports optional filtering by `studyUuid` and `updateType` query parameters:
 
 ```text
 /notify?studyUuid=<uuid>&updateType=<type>
-```
-
-Filters can also be updated dynamically by sending a JSON message on the open WebSocket connection:
-
-```json
-{
-  "filtersToAdd": {
-    "studyUuid": "...",
-    "updateType": "..."
-  },
-  "filtersToRemove": {
-    "removeStudyUuid": true,
-    "removeUpdateType": true
-  }
-}
 ```
 
 Each outbound text message is a JSON object with the consumed message payload and a filtered header set (only headers present in the original message are included):

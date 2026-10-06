@@ -6,20 +6,15 @@
  */
 package org.gridsuite.study.notification.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.MultiGauge;
 import io.micrometer.core.instrument.Tags;
-import org.gridsuite.study.notification.server.dto.Filters;
-import org.gridsuite.study.notification.server.dto.FiltersToAdd;
-import org.gridsuite.study.notification.server.dto.FiltersToRemove;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
@@ -32,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
@@ -129,45 +122,6 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
         return filterUpdateType == null || filterUpdateType.equals(message.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 
-    public Flux<WebSocketMessage> receive(WebSocketSession webSocketSession) {
-        return webSocketSession.receive()
-                .doOnNext(webSocketMessage -> {
-                    try {
-                        //if it's not the heartbeat
-                        if (webSocketMessage.getType().equals(WebSocketMessage.Type.TEXT)) {
-                            String wsPayload = webSocketMessage.getPayloadAsText();
-                            logger.debug("Message received : {} by session {}", wsPayload, webSocketSession.getId());
-                            Filters receivedFilters = jacksonObjectMapper.readValue(webSocketMessage.getPayloadAsText(), Filters.class);
-                            handleReceivedFilters(webSocketSession, receivedFilters);
-                        }
-                    } catch (JsonProcessingException e) {
-                        logger.error(e.toString(), e);
-                    }
-                });
-    }
-
-    private void handleReceivedFilters(WebSocketSession webSocketSession, Filters filters) {
-        if (filters.getFiltersToRemove() != null) {
-            FiltersToRemove filtersToRemove = filters.getFiltersToRemove();
-            if (Boolean.TRUE.equals(filtersToRemove.getRemoveUpdateType())) {
-                webSocketSession.getAttributes().remove(FILTER_UPDATE_TYPE);
-            }
-            if (Boolean.TRUE.equals(filtersToRemove.getRemoveStudyUuid())) {
-                webSocketSession.getAttributes().remove(FILTER_STUDY_UUID);
-            }
-        }
-        if (filters.getFiltersToAdd() != null) {
-            FiltersToAdd filtersToAdd = filters.getFiltersToAdd();
-            //because null is not allowed in ConcurrentHashMap and will cause the websocket to close
-            if (filtersToAdd.getUpdateType() != null) {
-                webSocketSession.getAttributes().put(FILTER_UPDATE_TYPE, filtersToAdd.getUpdateType());
-            }
-            if (filtersToAdd.getStudyUuid() != null) {
-                webSocketSession.getAttributes().put(FILTER_STUDY_UUID, filtersToAdd.getStudyUuid());
-            }
-        }
-    }
-
     @Override
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
@@ -188,7 +142,7 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
 
         return webSocketSession
                 .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
-                .and(receive(webSocketSession))
+                .and(webSocketSession.receive())
                 .doFirst(() -> updateConnectionMetrics(webSocketSession))
                 .doFinally(s -> updateDisconnectionMetrics(webSocketSession));
     }
@@ -210,6 +164,6 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
 
     private void updateConnectionMetricsRegistry() {
         multiGauge.register(userConnections.entrySet().stream().map(e -> MultiGauge.Row.of(Tags.of(USER_TAG, e.getKey()), e.getValue()))
-                                    .collect(toList()), true);
+                                    .toList(), true);
     }
 }
