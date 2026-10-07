@@ -18,19 +18,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.notification.server.QuotaWebSocketHandler.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
@@ -141,5 +136,15 @@ class QuotaWebSocketHandlerTest extends AbstractWebSocketHandlerTest<QuotaWebSoc
     @Test
     void testOtherUserIdFilter() {
         withFilters("userId2");
+    }
+
+    @Test
+    void testMissingUserIdDoesNotReceiveQuotaUpdates() {
+        setUpUriComponentBuilder(null, null);
+        var message = new GenericMessage<>("", Map.of(HEADER_USER_ID, "testUserId"));
+
+        var handler = createHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
+
+        assertFalse(handler.filterMessage(ws, message));
     }
 }

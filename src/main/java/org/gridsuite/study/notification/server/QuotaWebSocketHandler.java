@@ -53,7 +53,7 @@ public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     protected boolean filterMessage(WebSocketSession webSocketSession, Message<String> message) {
         String userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
-        return userId == null || userId.equals(message.getHeaders().get(HEADER_USER_ID));
+        return userId != null && userId.equals(message.getHeaders().get(HEADER_USER_ID));
     }
 
     @Override
