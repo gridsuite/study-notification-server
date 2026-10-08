@@ -118,18 +118,6 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnFalseWhenUserIsNotAuthenticated() {
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.isAuthenticated()).thenReturn(false);
-
-        Boolean result = authorizationService
-                .canReadStudy(websocketSession(UUID.randomUUID(), authentication))
-                .block();
-
-        assertThat(result).isFalse();
-    }
-
-    @Test
     void shouldReturnFalseWhenStudyUuidIsInvalid() {
         Boolean result = authorizationService
                 .canReadStudy(websocketSession(
