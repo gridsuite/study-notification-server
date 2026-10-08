@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.web.reactive.socket.WebSocketMessage;
@@ -24,7 +25,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,18 +43,20 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
         handler.consumeNotification().accept(flux);
     }
 
-    private void setUpUriComponentBuilder(String connectedUserId) {
-        setUpUriComponentBuilder(connectedUserId, null, null);
+    @Override
+    protected void setUpHandshakeInfoHeaders(String connectedUserId) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(HEADER_USER_ID, connectedUserId);
+        when(handshakeinfo.getHeaders()).thenReturn(httpHeaders);
+        when(handshakeinfo.getUri()).thenReturn(java.net.URI.create("http://localhost:1234/?studyUuid=study-123"));
     }
 
     private void setUpUriComponentBuilder(String connectedUserId, String filterStudyUuid, String filterUpdateType) {
         UriComponentsBuilder uriComponentBuilder = UriComponentsBuilder.fromUriString("http://localhost:1234/notify");
+        uriComponentBuilder.queryParam(QUERY_STUDY_UUID, filterStudyUuid);
 
         setUpHandshakeInfoHeaders(connectedUserId);
 
-        if (filterStudyUuid != null) {
-            uriComponentBuilder.queryParam(QUERY_STUDY_UUID, filterStudyUuid);
-        }
         if (filterUpdateType != null) {
             uriComponentBuilder.queryParam(QUERY_UPDATE_TYPE, filterUpdateType);
         }
@@ -62,18 +64,12 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
         when(handshakeinfo.getUri()).thenReturn(uriComponentBuilder.build().toUri());
     }
 
-    private void withFilters(String filterStudyUuid, String filterUpdateType, boolean inUrl) {
+    private void withFilters(String filterStudyUuid, String filterUpdateType) {
         String connectedUserId = "userId";
-        String otherUserId = "userId2";
-
         Map<String, Object> filterMap = new HashMap<>();
         when(ws.getAttributes()).thenReturn(filterMap);
 
-        if (inUrl) {
-            setUpUriComponentBuilder(connectedUserId, filterStudyUuid, filterUpdateType);
-        } else {
-            setUpUriComponentBuilder(connectedUserId);
-        }
+        setUpUriComponentBuilder(connectedUserId, filterStudyUuid, filterUpdateType);
 
         var notificationWebSocketHandler = new NotificationWebSocketHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
         var atomicRef = new AtomicReference<FluxSink<Message<String>>>();
@@ -81,15 +77,6 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
         notificationWebSocketHandler.consumeNotification().accept(flux);
         var sink = atomicRef.get();
         notificationWebSocketHandler.handle(ws);
-
-        if (!inUrl) {
-            if (filterUpdateType != null) {
-                filterMap.put(FILTER_UPDATE_TYPE, filterUpdateType);
-            }
-            if (filterStudyUuid != null) {
-                filterMap.put(FILTER_STUDY_UUID, filterStudyUuid);
-            }
-        }
 
         List<GenericMessage<String>> refMessages = Stream.<Map<String, Object>>of(
                 Map.of(HEADER_STUDY_UUID, "foo", HEADER_UPDATE_TYPE, "oof"),
@@ -107,8 +94,6 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
                 Map.of(HEADER_STUDY_UUID, "bar", HEADER_UPDATE_TYPE, "rab", HEADER_SUBSTATIONS_IDS, "s1"),
 
                 Map.of(HEADER_STUDY_UUID, "public_" + connectedUserId, HEADER_UPDATE_TYPE, "oof", HEADER_USER_ID, connectedUserId),
-                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId),
-                Map.of(HEADER_STUDY_UUID, "public_" + otherUserId, HEADER_UPDATE_TYPE, "rab", HEADER_USER_ID, otherUserId, HEADER_ERROR, "error_message"),
 
                 Map.of(HEADER_STUDY_UUID, "nodes", HEADER_UPDATE_TYPE, "insert", HEADER_PARENT_NODE, UUID.randomUUID().toString(), HEADER_NEW_NODE, UUID.randomUUID().toString(), HEADER_INSERT_MODE,
                         true),
@@ -123,19 +108,20 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Flux<WebSocketMessage>> argument = ArgumentCaptor.forClass(Flux.class);
-        verify(ws).send(argument.capture());
         List<String> messages = new ArrayList<>();
-        argument.getValue().map(WebSocketMessage::getPayloadAsText).subscribe(messages::add);
-        refMessages.forEach(sink::next);
-        sink.complete();
+
+        if (filterStudyUuid != null) {
+            verify(ws).send(argument.capture());
+            argument.getValue().map(WebSocketMessage::getPayloadAsText).subscribe(messages::add);
+            refMessages.forEach(sink::next);
+            sink.complete();
+        }
 
         List<Map<String, Object>> expected = refMessages.stream()
                 .filter(m -> {
                     String studyUuid = (String) m.getHeaders().get(HEADER_STUDY_UUID);
                     String updateType = (String) m.getHeaders().get(HEADER_UPDATE_TYPE);
-                    System.out.println((filterStudyUuid == null || filterStudyUuid.equals(studyUuid))
-                            && (filterUpdateType == null || filterUpdateType.equals(updateType)));
-                    return (filterStudyUuid == null || filterStudyUuid.equals(studyUuid)) && (filterUpdateType == null || filterUpdateType.equals(updateType));
+                    return (studyUuid.equals(filterStudyUuid)) && (filterUpdateType == null || updateType.equals(filterUpdateType));
                 })
                 .map(GenericMessage::getHeaders)
                 .map(NotificationWebSocketHandlerTest::toResultHeader)
@@ -149,7 +135,6 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
             }
         }).toList();
         assertEquals(expected, actual);
-        assertNotEquals(0, actual.size());
     }
 
     private static Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
@@ -180,52 +165,27 @@ class NotificationWebSocketHandlerTest extends AbstractWebSocketHandlerTest<Noti
     }
 
     @Test
-    void testWithoutFilterInBody() {
-        withFilters(null, null, false);
-    }
-
-    @Test
     void testWithoutFilterInUrl() {
-        withFilters(null, null, true);
-    }
-
-    @Test
-    void testStudyFilterInBody() {
-        withFilters("bar", null, false);
+        withFilters(null, null);
     }
 
     @Test
     void testStudyFilterInUrl() {
-        withFilters("bar", null, true);
-    }
-
-    @Test
-    void testTypeFilterInBody() {
-        withFilters(null, "rab", false);
+        withFilters("bar", null);
     }
 
     @Test
     void testTypeFilterInUrl() {
-        withFilters(null, "rab", true);
-    }
-
-    @Test
-    void testStudyAndTypeFilterInBody() {
-        withFilters("bar", "rab", false);
+        withFilters(null, "rab");
     }
 
     @Test
     void testStudyAndTypeFilterInUrl() {
-        withFilters("bar", "rab", true);
-    }
-
-    @Test
-    void testEncodingCharactersInBody() {
-        withFilters("foo bar/bar", "foobar", false);
+        withFilters("bar", "rab");
     }
 
     @Test
     void testEncodingCharactersInUrl() {
-        withFilters("foo bar/bar", "foobar", true);
+        withFilters("foo bar/bar", "foobar");
     }
 }

@@ -36,7 +36,7 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private final String categoryBrokerInput = getClass().getName() + ".messages.input-broker";
     private final String categoryWsOutput = getClass().getName() + ".messages.output-websocket";
 
-    static final String HEADER_USER_ID = "userId";
+    public static final String HEADER_USER_ID = "userId";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
 

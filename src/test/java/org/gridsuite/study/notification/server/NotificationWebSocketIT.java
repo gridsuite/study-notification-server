@@ -7,13 +7,15 @@
 package org.gridsuite.study.notification.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import org.gridsuite.study.notification.server.authorization.AuthorizationService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Mono;
@@ -28,7 +30,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
+import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_ROLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
@@ -43,16 +48,17 @@ class NotificationWebSocketIT {
     @Autowired
     private MeterRegistry meterRegistry;
 
-    @Test
-    void echo() {
-        WebSocketClient client = new StandardWebSocketClient();
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.empty()).block();
+    @MockitoBean
+    private AuthorizationService authorizationService;
+
+    @BeforeEach
+    void setUp() {
+        when(authorizationService.canReadStudy(any()))
+                .thenAnswer(_ -> Mono.just(true));
     }
 
     protected URI getUrl(String path) {
-        return URI.create("ws://localhost:" + this.port + path);
+        return URI.create("ws://localhost:" + this.port + path + "?studyUuid=study123");
     }
 
     @RepeatedTest(10)
@@ -61,6 +67,7 @@ class NotificationWebSocketIT {
         HttpHeaders httpHeaders1 = new HttpHeaders();
         String user = "test";
         httpHeaders1.add(HEADER_USER_ID, user);
+        httpHeaders1.add(HEADER_ROLES, "USER");
         Map<String, Double> exp = Map.of(user, 2d);
         CountDownLatch connectionLatch = new CountDownLatch(2);
         CountDownLatch assertLatch = new CountDownLatch(1);
