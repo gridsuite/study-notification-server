@@ -53,7 +53,7 @@ public class AuthorizationService {
         }
 
         return session.getHandshakeInfo().getPrincipal()
-                .filter(p -> p instanceof Authentication a && a.isAuthenticated())
+                .filter(Authentication.class::isInstance)
                 .flatMap(p -> checkReadAccess(p.getName(), studyUuid))
                 .defaultIfEmpty(false);
     }
