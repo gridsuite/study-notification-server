@@ -22,13 +22,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.FILTER_STUDY_UUID;
-import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -53,8 +54,16 @@ class NotificationWebSocketHandlerPreAuthorizeTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
+
+        Mono<Principal> handshakePrincipal =
+                Mono.just(authenticated(userId));
+
         HandshakeInfo handshakeInfo = new HandshakeInfo(
-                URI.create("ws://localhost/notify" + query), headers, Mono.empty(), null);
+                URI.create("ws://localhost/notify" + query),
+                headers,
+                handshakePrincipal,
+                null
+        );
 
         Map<String, Object> attributes = new ConcurrentHashMap<>();
 
@@ -77,14 +86,12 @@ class NotificationWebSocketHandlerPreAuthorizeTest {
 
     @Test
     void shouldAllowWhenUserCanReadStudy() {
-        when(authorizationService.canReadStudy(any(), any())).thenReturn(Mono.just(true));
+        when(authorizationService.canReadStudy(any())).thenReturn(Mono.just(true));
         WebSocketSession session = mockSession(USER_1, "?studyUuid=" + STUDY_UUID);
 
         assertDoesNotThrow(() -> handleAs(authenticated(USER_1), session).block(Duration.ofSeconds(5)));
 
-        verify(authorizationService).canReadStudy(
-                argThat(auth -> USER_1.equals(auth.getName())),
-                same(session));
+        verify(authorizationService).canReadStudy(same(session));
 
         assertEquals(STUDY_UUID, session.getAttributes().get(FILTER_STUDY_UUID));
         verify(session).send(any());
@@ -93,16 +100,14 @@ class NotificationWebSocketHandlerPreAuthorizeTest {
 
     @Test
     void shouldDenyWhenUserCannotReadStudy() {
-        when(authorizationService.canReadStudy(any(), any())).thenReturn(Mono.just(false));
+        when(authorizationService.canReadStudy(any())).thenReturn(Mono.just(false));
         WebSocketSession session = mockSession(USER_2, "?studyUuid=" + STUDY_UUID);
 
         Mono<Void> result = handleAs(authenticated(USER_2), session);
         Duration duration = Duration.ofSeconds(5);
         assertThrows(AccessDeniedException.class, () -> result.block(duration));
 
-        verify(authorizationService).canReadStudy(
-                argThat(auth -> USER_2.equals(auth.getName())),
-                same(session));
+        verify(authorizationService).canReadStudy(same(session));
 
         assertTrue(session.getAttributes().isEmpty());
         verify(session, never()).send(any());
@@ -111,7 +116,7 @@ class NotificationWebSocketHandlerPreAuthorizeTest {
 
     @Test
     void shouldDenyWhenAuthorizationServiceFails() {
-        when(authorizationService.canReadStudy(any(), any()))
+        when(authorizationService.canReadStudy(any()))
                 .thenReturn(Mono.error(new IllegalStateException("directory-server down")));
         WebSocketSession session = mockSession(USER_1, "?studyUuid=" + STUDY_UUID);
 
@@ -123,7 +128,7 @@ class NotificationWebSocketHandlerPreAuthorizeTest {
 
     @Test
     void shouldDenyWithoutSecurityContext() {
-        when(authorizationService.canReadStudy(any(), any())).thenReturn(Mono.just(false));
+        when(authorizationService.canReadStudy(any())).thenReturn(Mono.just(false));
         WebSocketSession session = mockSession(USER_1, "?studyUuid=" + STUDY_UUID);
 
         Mono<Void> result = handler.handle(session);

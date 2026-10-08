@@ -124,7 +124,7 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
-    @PreAuthorize("@authorizationService.canReadStudy(authentication, #webSocketSession)")
+    @PreAuthorize("@authorizationService.canReadStudy(#webSocketSession)")
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();

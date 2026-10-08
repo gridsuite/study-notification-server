@@ -16,16 +16,19 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.socket.HandshakeInfo;
 import org.springframework.web.reactive.socket.WebSocketSession;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.Principal;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_USER_ID;
-import static org.mockito.Mockito.*;
+import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
@@ -68,10 +71,7 @@ class AuthorizationServiceTest {
         );
 
         Boolean result = authorizationService
-                .canReadStudy(
-                        authenticatedUser("user-123"),
-                        websocketSession(studyUuid)
-                )
+                .canReadStudy(websocketSession(studyUuid))
                 .block();
 
         assertThat(result).isTrue();
@@ -82,10 +82,7 @@ class AuthorizationServiceTest {
         UUID studyUuid = UUID.randomUUID();
 
         Boolean result = authorizationService
-                .canReadStudy(
-                        authenticatedUser("user-123"),
-                        websocketSession(studyUuid)
-                )
+                .canReadStudy(websocketSession(studyUuid, authenticatedUser("user-123")))
                 .block();
 
         assertThat(result).isTrue();
@@ -105,19 +102,16 @@ class AuthorizationServiceTest {
         );
 
         Boolean result = authorizationService
-                .canReadStudy(
-                        authenticatedUser("user-123"),
-                        websocketSession(UUID.randomUUID())
-                )
+                .canReadStudy(websocketSession(UUID.randomUUID()))
                 .block();
 
         assertThat(result).isFalse();
     }
 
     @Test
-    void shouldReturnFalseWhenAuthenticationIsNull() {
+    void shouldReturnFalseWhenPrincipalIsMissing() {
         Boolean result = authorizationService
-                .canReadStudy(null, websocketSession(UUID.randomUUID()))
+                .canReadStudy(websocketSessionWithoutPrincipal(UUID.randomUUID()))
                 .block();
 
         assertThat(result).isFalse();
@@ -129,7 +123,7 @@ class AuthorizationServiceTest {
         when(authentication.isAuthenticated()).thenReturn(false);
 
         Boolean result = authorizationService
-                .canReadStudy(authentication, websocketSession(UUID.randomUUID()))
+                .canReadStudy(websocketSession(UUID.randomUUID(), authentication))
                 .block();
 
         assertThat(result).isFalse();
@@ -138,10 +132,9 @@ class AuthorizationServiceTest {
     @Test
     void shouldReturnFalseWhenStudyUuidIsInvalid() {
         Boolean result = authorizationService
-                .canReadStudy(
-                        authenticatedUser("user-123"),
-                        websocketSession("ws://localhost/notifications?studyUuid=invalid")
-                )
+                .canReadStudy(websocketSession(
+                        "ws://localhost/notifications?studyUuid=invalid"
+                ))
                 .block();
 
         assertThat(result).isFalse();
@@ -169,17 +162,37 @@ class AuthorizationServiceTest {
     }
 
     private static WebSocketSession websocketSession(UUID studyUuid) {
+        return websocketSession(studyUuid, authenticatedUser("user-123"));
+    }
+
+    private static WebSocketSession websocketSession(UUID studyUuid, Authentication authentication) {
         return websocketSession(
-                "ws://localhost/notifications?studyUuid=" + studyUuid
+                "ws://localhost/notifications?studyUuid=" + studyUuid,
+                Mono.just(authentication)
+        );
+    }
+
+    private static WebSocketSession websocketSessionWithoutPrincipal(UUID studyUuid) {
+        return websocketSession(
+                "ws://localhost/notifications?studyUuid=" + studyUuid,
+                Mono.empty()
         );
     }
 
     private static WebSocketSession websocketSession(String uri) {
+        return websocketSession(
+                uri,
+                Mono.just(authenticatedUser("user-123"))
+        );
+    }
+
+    private static WebSocketSession websocketSession(String uri, Mono<Principal> principal) {
         WebSocketSession session = mock(WebSocketSession.class);
         HandshakeInfo handshakeInfo = mock(HandshakeInfo.class);
 
         when(session.getHandshakeInfo()).thenReturn(handshakeInfo);
         when(handshakeInfo.getUri()).thenReturn(URI.create(uri));
+        when(handshakeInfo.getPrincipal()).thenReturn(principal);
 
         return session;
     }

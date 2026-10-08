@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
+import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_ROLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -52,7 +53,7 @@ class NotificationWebSocketIT {
 
     @BeforeEach
     void setUp() {
-        when(authorizationService.canReadStudy(any(), any()))
+        when(authorizationService.canReadStudy(any()))
                 .thenAnswer(_ -> Mono.just(true));
     }
 
@@ -66,6 +67,7 @@ class NotificationWebSocketIT {
         HttpHeaders httpHeaders1 = new HttpHeaders();
         String user = "test";
         httpHeaders1.add(HEADER_USER_ID, user);
+        httpHeaders1.add(HEADER_ROLES, "USER");
         Map<String, Double> exp = Map.of(user, 2d);
         CountDownLatch connectionLatch = new CountDownLatch(2);
         CountDownLatch assertLatch = new CountDownLatch(1);

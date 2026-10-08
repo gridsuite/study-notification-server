@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.UUID;
 
-import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_USER_ID;
+import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
 
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
@@ -46,18 +46,19 @@ public class AuthorizationService {
         this.elementsAuthorizedPath = elementsAuthorizedPath;
     }
 
-    public Mono<Boolean> canReadStudy(Authentication authentication, WebSocketSession session) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(false);
-        }
-
+    public Mono<Boolean> canReadStudy(WebSocketSession session) {
         UUID studyUuid = extractStudyUuid(session);
         if (studyUuid == null) {
             return Mono.just(false);
         }
 
-        String userId = authentication.getName();
+        return session.getHandshakeInfo().getPrincipal()
+                .filter(p -> p instanceof Authentication a && a.isAuthenticated())
+                .flatMap(p -> checkReadAccess(p.getName(), studyUuid))
+                .defaultIfEmpty(false);
+    }
 
+    private Mono<Boolean> checkReadAccess(String userId, UUID studyUuid) {
         String path = UriComponentsBuilder.fromPath(elementsAuthorizedPath)
                 .queryParam(PARAM_ACCESS_TYPE, "READ")
                 .queryParam(PARAM_IDS, studyUuid)

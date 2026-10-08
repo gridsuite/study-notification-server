@@ -29,6 +29,8 @@ import reactor.core.publisher.Mono;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
+
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
  */
@@ -37,7 +39,6 @@ import java.util.List;
 @EnableReactiveMethodSecurity(proxyTargetClass = true) // proxyTargetClass=true is required: WebSocketConfiguration injects the concrete handler classes
 public class SecurityConfig {
 
-    public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_ROLES = "roles";
 
     @Bean
@@ -51,9 +52,6 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.requestCache(NoOpServerRequestCache.getInstance()))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterAt(headerAuthenticationFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/notify", "/quota").authenticated()
-                        .anyExchange().permitAll())
                 .build();
     }
 
