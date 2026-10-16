@@ -13,13 +13,13 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>22</version>
+        <version>28</version>
         <relativePath/>
     </parent>
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-notification-server</artifactId>
-    <version>2.32.0-SNAPSHOT</version>
+    <version>2.43.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>Study notification server</name>
@@ -42,7 +42,13 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>49.0.0</gridsuite-dependencies.version>
+        <!-- FIXME to remove when powsybl-parent supports JDK25 -->
+        <java.version>25</java.version>
+        <maven.jacoco.version>0.8.15</maven.jacoco.version>
+        <checkstyle.version>13.8.0</checkstyle.version>
+        <maven.jib.version>3.5.1</maven.jib.version>
+        <jib.from.image>powsybl/java:4.0.0</jib.from.image>
+        <gridsuite-dependencies.version>51.1.0</gridsuite-dependencies.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-notification-server</sonar.projectKey>
     </properties>
@@ -113,6 +119,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
         <!-- Runtime dependencies -->

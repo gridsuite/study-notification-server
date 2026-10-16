@@ -1,0 +1,78 @@
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.study.notification.server;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.messaging.Message;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.WebSocketSession;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
+ * <p>
+ * Spring Cloud Stream gets the consumeNotification bean and calls it with the
+ * flux from the broker. We call publish and connect to subscribe immediately to the flux
+ * and multicast the messages to all connected websockets and to discard the messages when
+ * no websockets are connected.
+ *
+ * @author Jon Harper <jon.harper at rte-france.com>
+ */
+@Component
+public class QuotaWebSocketHandler extends AbstractWebSocketHandler {
+
+    static final String QUERY_USER_ID = "userId";
+    static final String HEADER_QUOTA_TYPE = "quotaType";
+
+    private static final List<String> ADDITIONAL_PASSTHROUGH_HEADERS = List.of(HEADER_QUOTA_TYPE);
+
+    public QuotaWebSocketHandler(ObjectMapper jacksonObjectMapper, @Value("${notification.websocket.heartbeat.interval:30}") int heartbeatInterval) {
+        super(jacksonObjectMapper, heartbeatInterval);
+    }
+
+    @Bean
+    public Consumer<Flux<Message<String>>> consumeNotificationQuota() {
+        return this::consumeBrokerFlux;
+    }
+
+    @Override
+    protected List<String> getAdditionalPassthroughHeaders() {
+        return ADDITIONAL_PASSTHROUGH_HEADERS;
+    }
+
+    @Override
+    protected boolean filterMessage(WebSocketSession webSocketSession, Message<String> message) {
+        String userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        return userId != null && userId.equals(message.getHeaders().get(HEADER_USER_ID));
+    }
+
+    @Override
+    @PreAuthorize("true")
+    public Mono<Void> handle(WebSocketSession webSocketSession) {
+        return webSocketSession
+                .send(notificationFlux(webSocketSession).mergeWith(heartbeatFlux(webSocketSession)))
+                .doFirst(() -> logConnection(webSocketSession))
+                .doFinally(s -> logDisconnection(webSocketSession));
+    }
+
+    protected void logConnection(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        logger.info("New websocket connection id={} for user={}", webSocketSession.getId(), userId);
+    }
+
+    protected void logDisconnection(WebSocketSession webSocketSession) {
+        var userId = webSocketSession.getHandshakeInfo().getHeaders().getFirst(HEADER_USER_ID);
+        logger.info("Websocket disconnection id={} for user={}", webSocketSession.getId(), userId);
+    }
+}

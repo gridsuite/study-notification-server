@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,25 +7,33 @@
 package org.gridsuite.study.notification.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.gridsuite.study.notification.server.authorization.AuthorizationService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
+import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_ROLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
@@ -40,25 +48,26 @@ class NotificationWebSocketIT {
     @Autowired
     private MeterRegistry meterRegistry;
 
-    @Test
-    void echo() {
-        WebSocketClient client = new StandardWebSocketClient();
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.add(HEADER_USER_ID, "test");
-        client.execute(getUrl("/notify"), httpHeaders, ws -> Mono.empty()).block();
+    @MockitoBean
+    private AuthorizationService authorizationService;
+
+    @BeforeEach
+    void setUp() {
+        when(authorizationService.canReadStudy(any()))
+                .thenAnswer(_ -> Mono.just(true));
     }
 
     protected URI getUrl(String path) {
-        return URI.create("ws://localhost:" + this.port + path);
+        return URI.create("ws://localhost:" + this.port + path + "?studyUuid=study123");
     }
 
-    @Test
-    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    @RepeatedTest(10)
     void metricsMapOneUserTwoConnections() {
         WebSocketClient client1 = new StandardWebSocketClient();
         HttpHeaders httpHeaders1 = new HttpHeaders();
         String user = "test";
         httpHeaders1.add(HEADER_USER_ID, user);
+        httpHeaders1.add(HEADER_ROLES, "USER");
         Map<String, Double> exp = Map.of(user, 2d);
         CountDownLatch connectionLatch = new CountDownLatch(2);
         CountDownLatch assertLatch = new CountDownLatch(1);
@@ -71,8 +80,7 @@ class NotificationWebSocketIT {
         evaluationFuture.join(); // Throw assertion errors
     }
 
-    @Test
-    @Disabled("This test case is not stable due to unexpected behavior of meterRegistry in asynchronous test context")
+    @RepeatedTest(10)
     void metricsMapTwoUsers() {
         // First WebSocketClient for connections related to 'test' user
         WebSocketClient client1 = new StandardWebSocketClient();
@@ -101,7 +109,12 @@ class NotificationWebSocketIT {
         try {
             connectionLatch.countDown();
             assertLatch.await(); // Wait for assertion to be evaluated before closing the connection
+            boolean assertionFinished = assertLatch.await(5, TimeUnit.SECONDS);  // Wait for connections to be established
+            if (!assertionFinished) {
+                throw new AssertionError("Assertion not done within 5 seconds");
+            }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
     }
@@ -109,9 +122,15 @@ class NotificationWebSocketIT {
     private CompletableFuture<Void> evaluateAssert(CountDownLatch connectionLatch, Map<String, Double> exp, CountDownLatch assertLatch) {
         return CompletableFuture.runAsync(() -> {
             try {
-                connectionLatch.await();  // Wait for connections to be established
-                testMeterMap(exp);
+                boolean connectionsEstablished = connectionLatch.await(5, TimeUnit.SECONDS);  // Wait for connections to be established
+                if (!connectionsEstablished) {
+                    throw new AssertionError("WebSocket connections were not established within 5 seconds");
+                }
+                waitAtMost(Duration.ofSeconds(5)).untilAsserted(
+                        () -> testMeterMap(exp)
+                );
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             } finally {
                 assertLatch.countDown(); // Close connections if there is an assertion error

@@ -4,11 +4,13 @@ spring:
 
   cloud:
     function:
-      definition: consumeNotification
+      definition: "consumeNotification;consumeNotificationQuota"
     stream:
       bindings:
         consumeNotification-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
+        consumeNotificationQuota-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
 
 powsybl-ws:
   autoconfigure:
