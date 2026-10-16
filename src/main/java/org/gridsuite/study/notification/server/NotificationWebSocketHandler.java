@@ -69,6 +69,8 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     static final String HEADER_WORKSPACE_UUID = "workspaceUuid";
     static final String HEADER_PANEL_ID = "panelId";
     static final String HEADER_CLIENT_ID = "clientId";
+    static final String HEADER_SA_PROGRESS_CURRENT = "progressCurrent";
+    static final String HEADER_SA_PROGRESS_TOTAL = "progressTotal";
 
     private static final List<String> ADDITIONAL_PASSTHROUGH_HEADERS = List.of(
             HEADER_UPDATE_TYPE,
@@ -93,7 +95,9 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
             HEADER_FILE_NAME,
             HEADER_WORKSPACE_UUID,
             HEADER_PANEL_ID,
-            HEADER_CLIENT_ID);
+            HEADER_CLIENT_ID,
+            HEADER_SA_PROGRESS_CURRENT,
+            HEADER_SA_PROGRESS_TOTAL);
 
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
     private final MultiGauge multiGauge;
