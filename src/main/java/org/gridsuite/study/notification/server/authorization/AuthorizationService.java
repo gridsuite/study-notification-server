@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.socket.WebSocketSession;
@@ -17,9 +18,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
+import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_ROLES;
 
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
@@ -54,11 +57,18 @@ public class AuthorizationService {
 
         return session.getHandshakeInfo().getPrincipal()
                 .filter(Authentication.class::isInstance)
-                .flatMap(p -> checkReadAccess(p.getName(), studyUuid))
+                .map(Authentication.class::cast)
+                .flatMap(authentication -> {
+                    var authorities = authentication.getAuthorities().stream()
+                            .map(GrantedAuthority::getAuthority)
+                            .toList();
+
+                    return checkReadAccess(authentication.getName(), authorities, studyUuid);
+                })
                 .defaultIfEmpty(false);
     }
 
-    private Mono<Boolean> checkReadAccess(String userId, UUID studyUuid) {
+    private Mono<Boolean> checkReadAccess(String userId, List<String> roles, UUID studyUuid) {
         String path = UriComponentsBuilder.fromPath(elementsAuthorizedPath)
                 .queryParam(PARAM_ACCESS_TYPE, "READ")
                 .queryParam(PARAM_IDS, studyUuid)
@@ -67,6 +77,7 @@ public class AuthorizationService {
         return webClient.get()
                 .uri(path)
                 .header(HEADER_USER_ID, userId)
+                .header(HEADER_ROLES, String.join("|", roles))
                 .exchangeToMono(response -> {
                     if (response.statusCode().is2xxSuccessful()) {
                         return Mono.just(true);
