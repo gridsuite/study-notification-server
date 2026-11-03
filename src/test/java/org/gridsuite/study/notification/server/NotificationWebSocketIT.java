@@ -39,7 +39,8 @@ import static org.mockito.Mockito.when;
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {NotificationApplication.class})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {NotificationApplication.class},
+        properties = "spring.main.web-application-type=reactive")
 @DirtiesContext
 class NotificationWebSocketIT {
 
