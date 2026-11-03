@@ -6,8 +6,8 @@
  */
 package org.gridsuite.study.notification.server;
 
+import com.powsybl.ws.commons.security.AuthorizationWebService;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.gridsuite.study.notification.server.authorization.AuthorizationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +28,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_ROLES;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
-import static org.gridsuite.study.notification.server.config.SecurityConfig.HEADER_ROLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -49,7 +50,7 @@ class NotificationWebSocketIT {
     private MeterRegistry meterRegistry;
 
     @MockitoBean
-    private AuthorizationService authorizationService;
+    private AuthorizationWebService authorizationService;
 
     @BeforeEach
     void setUp() {

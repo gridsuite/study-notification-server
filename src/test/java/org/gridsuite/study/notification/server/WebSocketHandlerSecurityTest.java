@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.notification.server;
 
+import com.powsybl.ws.commons.security.AbstractWebSocketHandlerSecurityTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -25,28 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
  */
-class WebSocketHandlerSecurityTest {
-    private static final String BASE_PACKAGE = "org.gridsuite.study.notification.server";
+class WebSocketHandlerSecurityTest extends AbstractWebSocketHandlerSecurityTest {
 
-    static Stream<Class<?>> webSocketHandlers() {
-        var scanner = new ClassPathScanningCandidateComponentProvider(false);
-        scanner.addIncludeFilter(new AssignableTypeFilter(WebSocketHandler.class));
-
-        return scanner.findCandidateComponents(BASE_PACKAGE).stream()
-                .map(beanDefinition -> ClassUtils.resolveClassName(
-                        Objects.requireNonNull(beanDefinition.getBeanClassName()),
-                        WebSocketHandlerSecurityTest.class.getClassLoader()));
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("webSocketHandlers")
-    void handleMethodMustBeAnnotatedWithPreAuthorize(Class<?> handlerClass) throws NoSuchMethodException {
-        Method handle = handlerClass.getMethod("handle", WebSocketSession.class);
-
-        boolean secured = AnnotatedElementUtils.hasAnnotation(handle, PreAuthorize.class)
-                || AnnotatedElementUtils.hasAnnotation(handle.getDeclaringClass(), PreAuthorize.class);
-
-        assertTrue(secured, () -> "Missing @PreAuthorize on "
-                + handle.getDeclaringClass().getName() + "#handle(WebSocketSession)");
+    @Override
+    protected String getBasePackage() {
+        return "org.gridsuite.study.notification.server";
     }
 }

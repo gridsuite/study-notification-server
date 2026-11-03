@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
+
 /**
  * A WebSocketHandler that sends messages from a broker to websockets opened by clients, interleaving with pings to keep connections open.
  * <p>
