@@ -9,3 +9,8 @@ gridsuite:
   services:
     directory-server:
       base-uri: http://localhost:5026
+
+powsybl-ws:
+  autoconfigure:
+    authorization-system:
+      directory-server-base-uri: http://localhost:5026
