@@ -94,7 +94,7 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
      */
     protected abstract List<String> getAdditionalPassthroughHeaders();
 
-    Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
+    private Map<String, Object> toResultHeader(Map<String, Object> messageHeader) {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
 
