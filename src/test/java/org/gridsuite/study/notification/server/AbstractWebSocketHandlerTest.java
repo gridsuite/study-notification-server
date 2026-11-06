@@ -7,6 +7,7 @@
 package org.gridsuite.study.notification.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.impl.LongStringHelper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_ERROR;
 import static org.gridsuite.study.notification.server.AbstractWebSocketHandler.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -161,5 +163,19 @@ abstract class AbstractWebSocketHandlerTest<T extends AbstractWebSocketHandler> 
         sink.complete();
         assertEquals(0, messages1.size());
         assertEquals(0, messages2.size());
+    }
+
+    @Test
+    void testLongErrorHeader() throws Exception {
+        // RabbitMQ delivers headers longer than 1024 bytes as a LongString instead of a String
+        String longError = "e".repeat(2000);
+        Map<String, Object> messageHeaders = Map.of(HEADER_ERROR, LongStringHelper.asLongString(longError));
+
+        var handler = createHandler(objectMapper, meterRegistry, Integer.MAX_VALUE);
+        Map<String, Object> resultHeaders = handler.toResultHeader(messageHeaders);
+
+        // the error header must be a String, otherwise Jackson cannot serialize it for the websocket
+        assertEquals(longError, resultHeaders.get(HEADER_ERROR));
+        objectMapper.writeValueAsString(resultHeaders);
     }
 }
