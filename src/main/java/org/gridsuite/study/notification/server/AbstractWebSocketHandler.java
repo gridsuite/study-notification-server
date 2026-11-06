@@ -98,7 +98,7 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
 
-        passHeader(messageHeader, resHeader, HEADER_ERROR);
+        passHeaderAsString(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
 
         for (String headerName : getAdditionalPassthroughHeaders()) {
@@ -111,6 +111,17 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private static void passHeader(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
         if (messageHeader.get(headerName) != null) {
             resHeader.put(headerName, messageHeader.get(headerName));
+        }
+    }
+
+    /**
+     * Headers longer than 1024 bytes are received from RabbitMQ as a LongString instead of a String,
+     * which Jackson cannot serialize: convert the value to a String.
+     */
+    private static void passHeaderAsString(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+        Object value = messageHeader.get(headerName);
+        if (value != null) {
+            resHeader.put(headerName, value.toString());
         }
     }
 
