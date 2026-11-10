@@ -158,7 +158,6 @@
             <artifactId>powsybl-ws-commons</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>1.42.0-SNAPSHOT</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.tomcat.embed</groupId>
