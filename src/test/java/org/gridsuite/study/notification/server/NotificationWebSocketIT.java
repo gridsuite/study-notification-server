@@ -6,16 +6,15 @@
  */
 package org.gridsuite.study.notification.server;
 
-import com.powsybl.ws.commons.security.AuthorizationWebService;
+import com.powsybl.ws.commons.security.restclient.AllowAllAuthorizationTestConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.socket.client.StandardWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Mono;
@@ -33,14 +32,12 @@ import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADE
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 /**
  * @author Jon Harper <jon.harper at rte-france.com>
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {NotificationApplication.class},
-        properties = "spring.main.web-application-type=reactive")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {NotificationApplication.class})
+@Import(AllowAllAuthorizationTestConfiguration.class)
 @DirtiesContext
 class NotificationWebSocketIT {
 
@@ -49,15 +46,6 @@ class NotificationWebSocketIT {
 
     @Autowired
     private MeterRegistry meterRegistry;
-
-    @MockitoBean
-    private AuthorizationWebService authorizationService;
-
-    @BeforeEach
-    void setUp() {
-        when(authorizationService.canReadStudy(any()))
-                .thenAnswer(_ -> Mono.just(true));
-    }
 
     protected URI getUrl(String path) {
         return URI.create("ws://localhost:" + this.port + path + "?studyUuid=study123");

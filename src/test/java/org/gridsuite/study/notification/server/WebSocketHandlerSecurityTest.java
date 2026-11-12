@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.notification.server;
 
-import com.powsybl.ws.commons.security.AbstractWebSocketHandlerSecurityTest;
+import com.powsybl.ws.commons.security.webclient.AbstractWebSocketHandlerSecurityTest;
 
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
