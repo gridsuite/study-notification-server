@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.notification.server;
 
-import com.powsybl.ws.commons.security.restclient.AllowAllAuthorizationTestConfiguration;
+import com.powsybl.ws.commons.security.AllowAllAuthorizationTestConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
