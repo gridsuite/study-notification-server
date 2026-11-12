@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
 import static org.gridsuite.study.notification.server.NotificationWebSocketHandler.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
