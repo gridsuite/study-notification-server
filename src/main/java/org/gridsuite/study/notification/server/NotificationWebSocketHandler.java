@@ -44,7 +44,7 @@ import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADE
 @Component
 public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
 
-    static final String QUERY_STUDY_UUID = "studyUuid";
+    public static final String QUERY_STUDY_UUID = "studyUuid";
     static final String FILTER_STUDY_UUID = QUERY_STUDY_UUID;
     static final String QUERY_UPDATE_TYPE = "updateType";
     static final String FILTER_UPDATE_TYPE = QUERY_UPDATE_TYPE;
@@ -126,7 +126,7 @@ public class NotificationWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
-    @PreAuthorize("@authorizationService.canReadStudy(#webSocketSession)")
+    @PreAuthorize("@authorizationService.canRead(#webSocketSession, T(org.gridsuite.study.notification.server.NotificationWebSocketHandler).QUERY_STUDY_UUID)")
     public Mono<Void> handle(WebSocketSession webSocketSession) {
         var uri = webSocketSession.getHandshakeInfo().getUri();
         MultiValueMap<String, String> parameters = UriComponentsBuilder.fromUri(uri).build(true).getQueryParams();
