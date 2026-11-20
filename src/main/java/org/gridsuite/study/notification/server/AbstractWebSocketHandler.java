@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
+
 /**
  * Base class factoring out the common behaviour shared by the notification websocket handlers:
  * connecting the broker flux, converting broker messages to websocket messages, sending heartbeat
@@ -36,7 +38,6 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private final String categoryBrokerInput = getClass().getName() + ".messages.input-broker";
     private final String categoryWsOutput = getClass().getName() + ".messages.output-websocket";
 
-    public static final String HEADER_USER_ID = "userId";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
 
