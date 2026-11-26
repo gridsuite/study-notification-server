@@ -16,3 +16,5 @@ powsybl-ws:
   autoconfigure:
     base-exception-handler:
       enable: false
+    authorization-system:
+      enable: true

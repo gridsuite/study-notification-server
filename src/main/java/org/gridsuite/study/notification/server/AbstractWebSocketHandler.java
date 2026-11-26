@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
+
 /**
  * Base class factoring out the common behaviour shared by the notification websocket handlers:
  * connecting the broker flux, converting broker messages to websocket messages, sending heartbeat
@@ -36,7 +38,6 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private final String categoryBrokerInput = getClass().getName() + ".messages.input-broker";
     private final String categoryWsOutput = getClass().getName() + ".messages.output-websocket";
 
-    public static final String HEADER_USER_ID = "userId";
     static final String HEADER_TIMESTAMP = "timestamp";
     static final String HEADER_ERROR = "error";
 
@@ -98,7 +99,7 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
         var resHeader = new HashMap<String, Object>();
         resHeader.put(HEADER_TIMESTAMP, messageHeader.get(HEADER_TIMESTAMP));
 
-        passHeader(messageHeader, resHeader, HEADER_ERROR);
+        passHeaderAsString(messageHeader, resHeader, HEADER_ERROR);
         passHeader(messageHeader, resHeader, HEADER_USER_ID); // to filter the display of error messages in the front end
 
         for (String headerName : getAdditionalPassthroughHeaders()) {
@@ -111,6 +112,17 @@ public abstract class AbstractWebSocketHandler implements WebSocketHandler {
     private static void passHeader(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
         if (messageHeader.get(headerName) != null) {
             resHeader.put(headerName, messageHeader.get(headerName));
+        }
+    }
+
+    /**
+     * Headers longer than 1024 bytes are received from RabbitMQ as a LongString instead of a String,
+     * which Jackson cannot serialize: convert the value to a String.
+     */
+    private static void passHeaderAsString(Map<String, Object> messageHeader, HashMap<String, Object> resHeader, String headerName) {
+        Object value = messageHeader.get(headerName);
+        if (value != null) {
+            resHeader.put(headerName, value.toString());
         }
     }
 
