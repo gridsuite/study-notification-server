@@ -50,7 +50,7 @@
         <jib.from.image>powsybl/java:4.0.0</jib.from.image>
         <gridsuite-dependencies.version>51.2.0-SNAPSHOT</gridsuite-dependencies.version>
         <!-- FIXME remove this in the next gridsuite-dependencies update -->
-        <powsybl-ws-commons.version>1.42.0</powsybl-ws-commons.version>
+        <powsybl-ws-commons.version>1.43.0-SNAPSHOT</powsybl-ws-commons.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-notification-server</sonar.projectKey>
     </properties>
